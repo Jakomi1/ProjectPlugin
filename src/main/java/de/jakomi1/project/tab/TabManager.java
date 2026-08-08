@@ -20,7 +20,7 @@ import java.util.function.Function;
  * Scoreboard-Wert (Todeszahl) hinter dem Namen anzeigen, wie im
  * CrackedAttack-Tab-Fix.
  */
-public final class TabManager {
+public final class TabManager implements Manager {
 
     private final ProjectServer server;
 
@@ -99,6 +99,7 @@ public final class TabManager {
         return this;
     }
 
+    @Override
     public TabManager enable() {
         if (enabled) return this;
         enabled = true;
@@ -108,8 +109,23 @@ public final class TabManager {
         return this;
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Deaktiviert die Tab-Liste: Aktualisierungs-Timer stoppen.
+     */
+    @Override
+    public void disable() {
+        if (!enabled) return;
+        enabled = false;
+
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
     }
 
     public void updateAll() {

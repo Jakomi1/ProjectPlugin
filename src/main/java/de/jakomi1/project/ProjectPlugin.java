@@ -22,6 +22,7 @@ public abstract class ProjectPlugin extends JavaPlugin {
 
     @Override
     public final void onDisable() {
+        this.server.disable();
         this.database.shutdown();
 
         this.onDisable(this.server);

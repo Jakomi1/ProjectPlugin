@@ -1,5 +1,6 @@
 package de.jakomi1.project.region;
 
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
@@ -24,11 +25,13 @@ import java.util.function.Predicate;
  * sind. Spieler mit Bypass (Standard: Scoreboard-Tag {@code adminmode}) dürfen
  * weiterhin bauen.
  */
-public final class RegionProtection {
+public final class RegionProtection implements Manager {
 
     private final ProjectServer server;
 
     private boolean enabled;
+
+    private RegionProtectionListener protectionListener;
 
     private final Set<Biome> primaryBiomes = new HashSet<>();
     private final Set<Biome> secondaryBiomes = new HashSet<>();
@@ -65,15 +68,31 @@ public final class RegionProtection {
     /**
      * Aktiviert den Schutz und registriert den Listener.
      */
+    @Override
     public RegionProtection enable() {
         if (enabled) return this;
         enabled = true;
-        new RegionProtectionListener(this).register(server.plugin());
+        this.protectionListener = new RegionProtectionListener(this);
+        protectionListener.register(server.plugin());
         return this;
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Deaktiviert den Schutz: Listener abmelden.
+     */
+    @Override
+    public void disable() {
+        if (!enabled) return;
+        enabled = false;
+
+        if (protectionListener != null) {
+            protectionListener.unregister();
+        }
     }
 
     /**

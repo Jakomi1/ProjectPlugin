@@ -8,6 +8,7 @@
  */
 package de.jakomi1.project.invsee;
 
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.project.invsee.listener.InvseeListener;
 import de.jakomi1.project.invsee.session.InvseeSessionManager;
@@ -20,7 +21,7 @@ import de.jakomi1.project.invsee.session.InvseeSessionManager;
  *   server.invsee().sessions()  // Zugriff auf die Sessions
  * </pre>
  */
-public final class InvseeManager {
+public final class InvseeManager implements Manager {
 
     private final ProjectServer server;
     private final InvseeSessionManager sessionManager;
@@ -34,6 +35,7 @@ public final class InvseeManager {
         this.listener = new InvseeListener(this);
     }
 
+    @Override
     public InvseeManager enable() {
         if (enabled) return this;
         enabled = true;
@@ -42,6 +44,7 @@ public final class InvseeManager {
         return this;
     }
 
+    @Override
     public void disable() {
         if (!enabled) return;
         enabled = false;
@@ -49,6 +52,7 @@ public final class InvseeManager {
         listener.unregister();
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
     }

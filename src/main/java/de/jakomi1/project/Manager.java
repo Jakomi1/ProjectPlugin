@@ -5,9 +5,9 @@ package de.jakomi1.project;
  *
  * Jeder Manager folgt dem gleichen API-Stil:
  * <pre>
- *   server.roles().enable();            // Aktivieren (idempotent, flüssig)
- *   server.roles().isEnabled();         // Zustand abfragen
- *   server.roles().disable();           // Deaktivieren (Timer/Listener räumen auf)
+ *   server.permissions().enable();       // Aktivieren (idempotent, flüssig)
+ *   server.permissions().isEnabled();    // Zustand abfragen
+ *   server.permissions().disable();      // Deaktivieren (Timer/Listener räumen auf)
  * </pre>
  *
  * Konkrete Manager überschreiben {@link #enable()} mit kovariantem Rückgabetyp,

@@ -1,5 +1,6 @@
 package de.jakomi1.project.world;
 
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -33,7 +34,7 @@ import java.util.TreeMap;
  * gebündelte Default-Ressource (Stufen 0 bis 100) in den Plugin-Ordner
  * kopiert.
  */
-public final class WorldPerformance {
+public final class WorldPerformance implements Manager {
 
     private static final String[] WORLDS = {"world", "world_nether", "world_the_end"};
     private static final int[] PLAYER_COUNTS = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
@@ -72,11 +73,13 @@ public final class WorldPerformance {
     private int lastAppliedPlayerKey = -1;
 
     private Component chatPrefix = Component.empty();
+    private WorldPerformanceListener performanceListener;
 
     public WorldPerformance(ProjectServer server) {
         this.server = server;
     }
 
+    @Override
     public WorldPerformance enable() {
         if (enabled) return this;
         enabled = true;
@@ -85,12 +88,27 @@ public final class WorldPerformance {
 
         load();
         updateDistances(true);
-        new WorldPerformanceListener(this).register(server.plugin());
+        this.performanceListener = new WorldPerformanceListener(this);
+        performanceListener.register(server.plugin());
         return this;
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Deaktiviert das System: Listener abmelden, bestehende Distanzen bleiben unverändert.
+     */
+    @Override
+    public void disable() {
+        if (!enabled) return;
+        enabled = false;
+
+        if (performanceListener != null) {
+            performanceListener.unregister();
+        }
     }
 
     public void load() {

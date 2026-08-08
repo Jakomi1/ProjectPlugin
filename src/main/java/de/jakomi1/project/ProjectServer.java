@@ -12,6 +12,8 @@ import de.jakomi1.project.tab.TabManager;
 import de.jakomi1.project.world.WorldPerformance;
 import net.kyori.adventure.text.Component;
 
+import java.util.List;
+
 public class ProjectServer {
     private final ProjectPlugin plugin;
     private final Scheduler scheduler;
@@ -104,5 +106,24 @@ public class ProjectServer {
 
     public void registerEverything() {
         plugin.getRegistry().getRegisterable().forEach(registerable -> registerable.register(plugin));
+    }
+
+    /**
+     * Deaktiviert alle aktivierten Manager (Timer/Listener aufräumen).
+     * Wird beim {@link ProjectPlugin#onDisable()} aufgerufen.
+     */
+    public void disable() {
+        for (Manager manager : List.of(
+                nametagManager,
+                tabManager,
+                worldPerformance,
+                regionProtection,
+                invseeManager,
+                roleManager
+        )) {
+            if (manager.isEnabled()) {
+                manager.disable();
+            }
+        }
     }
 }
