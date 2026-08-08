@@ -1,0 +1,393 @@
+'0':
+  world:
+    simulationDistance: 10
+    viewDistance: 16
+    spawnLimits:
+      ambient: 15
+      animal: 10
+      water_animal: 5
+      water_ambient: 20
+      axolotl: 5
+      monster: 50
+    ticksPerSpawn:
+      ambient: 5
+      animal: 400
+      water_animal: 5
+      water_ambient: 5
+      axolotl: 5
+      monster: 5
+  world_nether:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      ambient: 15
+      animal: 10
+      monster: 50
+    ticksPerSpawn:
+      ambient: 5
+      animal: 400
+      monster: 5
+  world_the_end:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      monster: 50
+    ticksPerSpawn:
+      monster: 5
+'10':
+  world:
+    simulationDistance: 10
+    viewDistance: 16
+    spawnLimits:
+      ambient: 5
+      animal: 15
+      water_animal: 10
+      water_ambient: 25
+      axolotl: 10
+      monster: 70
+    ticksPerSpawn:
+      ambient: 5
+      animal: 5
+      water_animal: 5
+      water_ambient: 5
+      axolotl: 5
+      monster: 1
+  world_nether:
+    simulationDistance: 10
+    viewDistance: 16
+    spawnLimits:
+      ambient: 5
+      animal: 15
+      monster: 70
+    ticksPerSpawn:
+      ambient: 5
+      animal: 5
+      monster: 1
+  world_the_end:
+    simulationDistance: 10
+    viewDistance: 16
+    spawnLimits:
+      monster: 70
+    ticksPerSpawn:
+      monster: 5
+'20':
+  world:
+    simulationDistance: 9
+    viewDistance: 11
+    spawnLimits:
+      ambient: 5
+      animal: 13
+      water_animal: 9
+      water_ambient: 22
+      axolotl: 9
+      monster: 70
+    ticksPerSpawn:
+      ambient: 8
+      animal: 50
+      water_animal: 8
+      water_ambient: 8
+      axolotl: 8
+      monster: 2
+  world_nether:
+    simulationDistance: 9
+    viewDistance: 14
+    spawnLimits:
+      ambient: 5
+      animal: 13
+      monster: 70
+    ticksPerSpawn:
+      ambient: 8
+      animal: 50
+      monster: 1
+  world_the_end:
+    simulationDistance: 9
+    viewDistance: 14
+    spawnLimits:
+      monster: 70
+    ticksPerSpawn:
+      monster: 5
+'30':
+  world:
+    simulationDistance: 6
+    viewDistance: 8
+    spawnLimits:
+      ambient: 5
+      animal: 12
+      water_animal: 8
+      water_ambient: 20
+      axolotl: 8
+      monster: 70
+    ticksPerSpawn:
+      ambient: 10
+      animal: 50
+      water_animal: 10
+      water_ambient: 10
+      axolotl: 10
+      monster: 4
+  world_nether:
+    simulationDistance: 7
+    viewDistance: 10
+    spawnLimits:
+      ambient: 5
+      animal: 12
+      monster: 70
+    ticksPerSpawn:
+      ambient: 10
+      animal: 100
+      monster: 1
+  world_the_end:
+    simulationDistance: 7
+    viewDistance: 10
+    spawnLimits:
+      monster: 50
+    ticksPerSpawn:
+      monster: 24
+'40':
+  world:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      ambient: 2
+      animal: 5
+      water_animal: 3
+      water_ambient: 9
+      axolotl: 3
+      monster: 30
+    ticksPerSpawn:
+      ambient: 12
+      animal: 150
+      water_animal: 12
+      water_ambient: 12
+      axolotl: 12
+      monster: 5
+  world_nether:
+    simulationDistance: 7
+    viewDistance: 10
+    spawnLimits:
+      ambient: 2
+      animal: 5
+      monster: 30
+    ticksPerSpawn:
+      ambient: 12
+      animal: 150
+      monster: 30
+  world_the_end:
+    simulationDistance: 7
+    viewDistance: 10
+    spawnLimits:
+      monster: 28
+    ticksPerSpawn:
+      monster: 30
+
+'50':
+  world:
+    simulationDistance: 5
+    viewDistance: 7
+    spawnLimits:
+      ambient: 2
+      animal: 4
+      water_animal: 2
+      water_ambient: 8
+      axolotl: 2
+      monster: 25
+    ticksPerSpawn:
+      ambient: 14
+      animal: 200
+      water_animal: 14
+      water_ambient: 14
+      axolotl: 14
+      monster: 40
+  world_nether:
+    simulationDistance: 6
+    viewDistance: 9
+    spawnLimits:
+      ambient: 2
+      animal: 4
+      monster: 25
+    ticksPerSpawn:
+      ambient: 14
+      animal: 200
+      monster: 40
+  world_the_end:
+    simulationDistance: 6
+    viewDistance: 9
+    spawnLimits:
+      monster: 25
+    ticksPerSpawn:
+      monster: 40
+
+'60':
+  world:
+    simulationDistance: 4
+    viewDistance: 6
+    spawnLimits:
+      ambient: 2
+      animal: 3
+      water_animal: 2
+      water_ambient: 7
+      axolotl: 2
+      monster: 22
+    ticksPerSpawn:
+      ambient: 16
+      animal: 250
+      water_animal: 16
+      water_ambient: 16
+      axolotl: 16
+      monster: 50
+  world_nether:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      ambient: 2
+      animal: 3
+      monster: 22
+    ticksPerSpawn:
+      ambient: 16
+      animal: 250
+      monster: 50
+  world_the_end:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      monster: 22
+    ticksPerSpawn:
+      monster: 50
+
+'70':
+  world:
+    simulationDistance: 4
+    viewDistance: 5
+    spawnLimits:
+      ambient: 2
+      animal: 2
+      water_animal: 2
+      water_ambient: 6
+      axolotl: 2
+      monster: 20
+    ticksPerSpawn:
+      ambient: 20
+      animal: 300
+      water_animal: 20
+      water_ambient: 20
+      axolotl: 20
+      monster: 60
+  world_nether:
+    simulationDistance: 5
+    viewDistance: 8
+    spawnLimits:
+      ambient: 2
+      animal: 2
+      monster: 20
+    ticksPerSpawn:
+      ambient: 20
+      animal: 300
+'80':
+  world:
+    simulationDistance: 4
+    viewDistance: 5
+    spawnLimits:
+      ambient: 1
+      animal: 2
+      water_animal: 1
+      water_ambient: 5
+      axolotl: 1
+      monster: 18
+    ticksPerSpawn:
+      ambient: 25
+      animal: 350
+      water_animal: 25
+      water_ambient: 25
+      axolotl: 25
+      monster: 70
+  world_nether:
+    simulationDistance: 3
+    viewDistance: 6
+    spawnLimits:
+      ambient: 1
+      animal: 2
+      monster: 18
+    ticksPerSpawn:
+      ambient: 25
+      animal: 350
+      monster: 70
+  world_the_end:
+    simulationDistance: 4
+    viewDistance: 7
+    spawnLimits:
+      monster: 18
+    ticksPerSpawn:
+      monster: 70
+
+'90':
+  world:
+    simulationDistance: 3
+    viewDistance: 5
+    spawnLimits:
+      ambient: 1
+      animal: 1
+      water_animal: 1
+      water_ambient: 4
+      axolotl: 1
+      monster: 15
+    ticksPerSpawn:
+      ambient: 30
+      animal: 400
+      water_animal: 30
+      water_ambient: 30
+      axolotl: 30
+      monster: 80
+  world_nether:
+    simulationDistance: 3
+    viewDistance: 6
+    spawnLimits:
+      ambient: 1
+      animal: 1
+      monster: 15
+    ticksPerSpawn:
+      ambient: 30
+      animal: 400
+      monster: 80
+  world_the_end:
+    simulationDistance: 3
+    viewDistance: 6
+    spawnLimits:
+      monster: 15
+    ticksPerSpawn:
+      monster: 80
+
+'100':
+  world:
+    simulationDistance: 3
+    viewDistance: 5
+    spawnLimits:
+      ambient: 1
+      animal: 1
+      water_animal: 1
+      water_ambient: 3
+      axolotl: 1
+      monster: 12
+    ticksPerSpawn:
+      ambient: 40
+      animal: 500
+      water_animal: 40
+      water_ambient: 40
+      axolotl: 40
+      monster: 100
+  world_nether:
+    simulationDistance: 3
+    viewDistance: 5
+    spawnLimits:
+      ambient: 1
+      animal: 1
+      monster: 12
+    ticksPerSpawn:
+      ambient: 40
+      animal: 500
+      monster: 100
+  world_the_end:
+    simulationDistance: 3
+    viewDistance: 5
+    spawnLimits:
+      monster: 12
+    ticksPerSpawn:
+      monster: 100
