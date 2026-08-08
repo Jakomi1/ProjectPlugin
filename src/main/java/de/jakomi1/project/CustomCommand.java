@@ -1,12 +1,7 @@
-package de.jakomi1.kingdoms.command;
+package de.jakomi1.project;
 
-import de.jakomi1.kingdoms.Registry;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandMap;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import org.bukkit.command.*;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 import org.jetbrains.annotations.NotNull;
@@ -16,9 +11,7 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
-import static de.jakomi1.kingdoms.Kingdoms.plugin;
-
-public interface  CustomCommand extends CommandExecutor, TabCompleter {
+public interface CustomCommand extends CommandExecutor, TabCompleter, Registerable {
 
     String name();
 
@@ -30,7 +23,7 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
         return null;
     }
 
-    default String generatedPermission() {
+    default String generatedPermission(ProjectPlugin plugin) {
         return plugin.getName().toLowerCase()
                 + ".command."
                 + name().toLowerCase();
@@ -58,9 +51,9 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
         return Collections.emptyList();
     }
 
-    default void register() {
-
-        CommandMap commandMap = getCommandMap();
+    @Override
+    default void handleRegister(ProjectPlugin plugin) {
+        CommandMap commandMap = getCommandMap(plugin);
 
         if (commandMap == null) {
             plugin.getLogger()
@@ -80,7 +73,7 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
                 );
             }
         } else if (permission.isEmpty() && permissionDefault() != null) {
-            permission = generatedPermission();
+            permission = generatedPermission(plugin);
 
             if (Bukkit.getPluginManager().getPermission(permission) == null) {
                 Bukkit.getPluginManager().addPermission(
@@ -92,7 +85,15 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
             }
         }
 
-        String finalPermission = permission;
+        Command dynamicCommand = getCommand(permission);
+
+        commandMap.register(
+                plugin.getName(),
+                dynamicCommand
+        );
+    }
+
+    private @NotNull Command getCommand(String permission) {
 
         Command dynamicCommand = new Command(
                 name(),
@@ -108,8 +109,8 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
                     String[] args
             ) {
 
-                if (!finalPermission.isEmpty()
-                        && !sender.hasPermission(finalPermission)) {
+                if (!permission.isEmpty()
+                        && !sender.hasPermission(permission)) {
                     return true;
                 }
 
@@ -141,17 +142,13 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
             }
         };
 
-        if (!finalPermission.isEmpty()) {
-            dynamicCommand.setPermission(finalPermission);
+        if (!permission.isEmpty()) {
+            dynamicCommand.setPermission(permission);
         }
-
-        commandMap.register(
-                plugin.getName(),
-                dynamicCommand
-        );
+        return dynamicCommand;
     }
 
-    private static CommandMap getCommandMap() {
+    private static CommandMap getCommandMap(ProjectPlugin plugin) {
 
         try {
 
@@ -170,10 +167,5 @@ public interface  CustomCommand extends CommandExecutor, TabCompleter {
 
             return null;
         }
-    }
-
-    static void registerAll() {
-        Registry.getCommands()
-                .forEach(CustomCommand::register);
     }
 }

@@ -1,19 +1,10 @@
 package de.jakomi1.project;
 
+import de.jakomi1.database.Table;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public abstract class ProjectPlugin extends JavaPlugin {
+import java.util.List;
 
-    @Override
-    public void onEnable() {
-
-    }
-
-    @Override
-    public void onDisable() {
-
-    }
-
-    public abstract void onEnable(ProjectServer server);
-    public abstract void onDisable(ProjectServer server);
+public abstract class ProjectRegistry {
+    public abstract List<Registerable> getRegisterable();
 }

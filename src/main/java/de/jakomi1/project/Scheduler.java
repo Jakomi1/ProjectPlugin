@@ -1,4 +1,4 @@
-package de.jakomi1.kingdoms;
+package de.jakomi1.project;
 
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
@@ -6,8 +6,6 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
-
-import static de.jakomi1.kingdoms.Kingdoms.plugin;
 
 public final class Scheduler {
 
@@ -23,7 +21,10 @@ public final class Scheduler {
         isFolia = folia;
     }
 
-    private Scheduler() {
+    private static ProjectPlugin plugin;
+
+    public static void init(ProjectPlugin plugin) {
+        de.jakomi1.project.Scheduler.plugin = plugin;
     }
 
     private static Plugin plugin() {

@@ -1,8 +1,0 @@
-name: ProjectPlugin
-version: '${version}'
-
-main: de.jakomi1.projectPlugin.ProjectPlugin
-api-version: '26.2'
-load: STARTUP
-
-authors: [ Jakomi1 ]
