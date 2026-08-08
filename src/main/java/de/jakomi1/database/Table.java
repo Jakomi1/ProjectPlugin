@@ -4,6 +4,7 @@ import de.jakomi1.project.ProjectPlugin;
 import de.jakomi1.project.Registerable;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -11,28 +12,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class Table<K> implements Registerable {
+public abstract class Table<K, V> implements Registerable {
 
-    protected final Map<K, Entry<K>> cache = new ConcurrentHashMap<>();
+    private final TableSchema schema;
+    private Database database;
+
+    private final Map<K, V> cache = new ConcurrentHashMap<>();
     private final Set<K> dirtyKeys = ConcurrentHashMap.newKeySet();
     private final Set<K> removedKeys = ConcurrentHashMap.newKeySet();
 
-    private final String tableName;
-    private Database database;
-
-    protected Table(String tableName) {
-        this.tableName = tableName;
+    protected Table(TableSchema schema) {
+        this.schema = schema;
     }
 
     final void initialize(Database database) {
         this.database = database;
-        update();
+        onInitialize();
         createTable();
         loadAll();
     }
 
     @Override
-    public void handleRegister(ProjectPlugin plugin) {
+    public void register(ProjectPlugin plugin) {
         plugin.getDatabase().register(this);
     }
 
@@ -40,30 +41,33 @@ public abstract class Table<K> implements Registerable {
         return database.connection();
     }
 
-    protected final String tableName() {
-        return tableName;
+    protected final TableSchema schema() {
+        return schema;
     }
 
     private void createTable() {
-        try (Statement statement = connection().createStatement()) {
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS %s (
-                        %s
-                    )
-                    """.formatted(tableName, columns()));
+        Connection connection = connection();
+        if (connection == null) return;
+
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(schema.createTableSql());
         } catch (SQLException ignored) {
         }
     }
 
     private void loadAll() {
-        try (Statement statement = connection().createStatement();
-             ResultSet rs = statement.executeQuery("SELECT * FROM " + tableName)) {
+        Connection connection = connection();
+        if (connection == null) return;
+
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(schema.selectAllSql())) {
 
             while (rs.next()) {
                 try {
-                    Entry<K> entry = read(rs);
-                    cache.put(entry.key(), entry);
-                    onLoaded(entry.key(), entry);
+                    K key = readKey(rs);
+                    V value = readValue(rs);
+                    cache.put(key, value);
+                    onLoaded(key, value);
                 } catch (SQLException ignored) {
                 }
             }
@@ -72,20 +76,19 @@ public abstract class Table<K> implements Registerable {
         }
     }
 
-    public final Entry<K> get(K key) {
+    public final V get(K key) {
         return cache.get(key);
     }
 
-    public final void put(Entry<K> entry) {
-        K key = entry.key();
-        Entry<K> previous = cache.put(key, entry);
+    public final void put(K key, V value) {
+        V previous = cache.put(key, value);
         dirtyKeys.add(key);
         removedKeys.remove(key);
-        onPut(key, entry, previous);
+        onPut(key, value, previous);
     }
 
     public final void remove(K key) {
-        Entry<K> removed = cache.remove(key);
+        V removed = cache.remove(key);
         if (removed != null) {
             dirtyKeys.remove(key);
             removedKeys.add(key);
@@ -93,58 +96,92 @@ public abstract class Table<K> implements Registerable {
         }
     }
 
+    public final boolean containsKey(K key) {
+        return cache.containsKey(key);
+    }
+
+    public final int size() {
+        return cache.size();
+    }
+
+    public final Set<K> keys() {
+        return Set.copyOf(cache.keySet());
+    }
+
     public final void flushNow() {
         Connection connection = connection();
+        if (connection == null) return;
+
+        boolean autoCommit;
+        try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+        } catch (SQLException ignored) {
+            return;
+        }
 
         try {
-            boolean autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
+            try (PreparedStatement upsert = connection.prepareStatement(schema.upsertSql())) {
+                for (K key : dirtyKeys) {
+                    V value = cache.get(key);
+                    if (value == null) continue;
 
-            for (K key : dirtyKeys) {
-                Entry<K> entry = cache.get(key);
-                if (entry != null) {
                     try {
-                        write(connection, entry);
+                        int index = bindKey(upsert, 1, key);
+                        bindValue(upsert, index, value);
+                        upsert.addBatch();
                     } catch (SQLException ignored) {
                     }
                 }
+                upsert.executeBatch();
             }
 
-            for (K key : removedKeys) {
-                try {
-                    delete(connection, key);
-                } catch (SQLException ignored) {
+            try (PreparedStatement delete = connection.prepareStatement(schema.deleteByKeySql())) {
+                for (K key : removedKeys) {
+                    try {
+                        bindKey(delete, 1, key);
+                        delete.addBatch();
+                    } catch (SQLException ignored) {
+                    }
                 }
+                delete.executeBatch();
             }
 
             dirtyKeys.clear();
             removedKeys.clear();
 
             connection.commit();
-            connection.setAutoCommit(autoCommit);
-
         } catch (SQLException exception) {
             try {
                 connection.rollback();
             } catch (SQLException ignored) {
             }
+        } finally {
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException ignored) {
+            }
         }
     }
 
-    protected abstract String columns();
-    protected abstract Entry<K> read(ResultSet rs) throws SQLException;
-    protected abstract void write(Connection connection, Entry<K> value) throws SQLException;
-    protected abstract void delete(Connection connection, K key) throws SQLException;
-    protected void update() {
+    protected abstract K readKey(ResultSet rs) throws SQLException;
+
+    protected abstract int bindKey(PreparedStatement ps, int index, K key) throws SQLException;
+
+    protected abstract V readValue(ResultSet rs) throws SQLException;
+
+    protected abstract int bindValue(PreparedStatement ps, int index, V value) throws SQLException;
+
+    protected void onInitialize() {
     }
 
-    protected void onLoaded(K key, Entry<K> value) {
+    protected void onLoaded(K key, V value) {
     }
 
-    protected void onPut(K key, Entry<K> value, Entry<K> previous) {
+    protected void onPut(K key, V value, V previous) {
     }
 
-    protected void onRemoved(K key, Entry<K> removed) {
+    protected void onRemoved(K key, V removed) {
     }
 
     protected void onShutdown() {

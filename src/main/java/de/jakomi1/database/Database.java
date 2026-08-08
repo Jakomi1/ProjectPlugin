@@ -16,8 +16,8 @@ public final class Database {
 
     private final ProjectPlugin plugin;
     private Connection connection;
-    private final List<Table<?>> tables = new ArrayList<>();
-    private final Map<Class<? extends Table<?>>, Table<?>> tableRegistry = new HashMap<>();
+    private final List<Table<?, ?>> tables = new ArrayList<>();
+    private final Map<Class<? extends Table<?, ?>>, Table<?, ?>> tableRegistry = new HashMap<>();
     private File pluginFolder;
 
     public Database(ProjectPlugin plugin) {
@@ -37,8 +37,8 @@ public final class Database {
         }
     }
 
-    void register(Table<?> table) {
-        Class<? extends Table<?>> clazz = tableClass(table);
+    void register(Table<?, ?> table) {
+        Class<? extends Table<?, ?>> clazz = tableClass(table);
 
         if (tableRegistry.containsKey(clazz)) {
             throw new IllegalStateException(
@@ -52,14 +52,13 @@ public final class Database {
     }
 
     @SuppressWarnings("unchecked")
-    private static Class<? extends Table<?>> tableClass(Table<?> table) {
-        return (Class<? extends Table<?>>) table.getClass();
+    private static Class<? extends Table<?, ?>> tableClass(Table<?, ?> table) {
+        return (Class<? extends Table<?, ?>>) table.getClass();
     }
 
-
     @SuppressWarnings("unchecked")
-    public <T extends Table<?>> T getTable(Class<T> clazz) {
-        Table<?> table = tableRegistry.get(clazz);
+    public <T extends Table<?, ?>> T getTable(Class<T> clazz) {
+        Table<?, ?> table = tableRegistry.get(clazz);
         if (table == null) throw new IllegalArgumentException("Table not registered: " + clazz.getSimpleName());
         return (T) table;
     }
@@ -73,12 +72,14 @@ public final class Database {
     }
 
     public void flushAll() {
-        for (Table<?> table : tables) table.flushNow();
+        for (Table<?, ?> table : tables) table.flushNow();
     }
 
     public void shutdown() {
+        if (connection == null) return;
+
         try {
-            for (Table<?> table : tables) table.onShutdown();
+            for (Table<?, ?> table : tables) table.onShutdown();
             flushAll();
             connection.close();
         } catch (SQLException exception) {

@@ -154,7 +154,7 @@ public final class ComponentUtils {
 
             int codePoint = text.codePointAt(text.offsetByCodePoints(0, i));
 
-            Component character = styledChar(
+            Component character = styledComponent(
                     new String(Character.toChars(codePoint)),
                     color,
                     bold,
@@ -165,31 +165,6 @@ public final class ComponentUtils {
         }
 
         return result;
-    }
-
-    private static Component styledChar(
-            String text,
-            TextColor color,
-            boolean bold,
-            Key font
-    ) {
-        Component component = Component.text(text);
-
-        if (color != null) {
-            component = component.color(color);
-        }
-
-        component = component
-                .decoration(TextDecoration.BOLD, bold)
-                .decoration(TextDecoration.ITALIC, false);
-
-        if (font != null) {
-            component = component.style(
-                    component.style().font(font)
-            );
-        }
-
-        return component;
     }
 
     private static TextColor interpolateColors(
@@ -460,7 +435,7 @@ public final class ComponentUtils {
             defaultColor = NamedTextColor.GRAY;
         }
 
-        return parseMarkupLinesWithAbility(
+        return parseMarkupLinesNoAbility(
                 input,
                 defaultColor,
                 defaultColor
@@ -481,7 +456,7 @@ public final class ComponentUtils {
             color = NamedTextColor.WHITE;
         }
 
-        return parseMarkupLinesWithAbility(
+        return parseMarkupLinesNoAbility(
                 input,
                 NamedTextColor.GRAY,
                 color
@@ -553,71 +528,6 @@ public final class ComponentUtils {
             if (i < lines.size() - 1) {
                 result = result.appendNewline();
             }
-        }
-
-        return result;
-    }
-
-    private static List<Component> parseMarkupLinesWithAbility(
-            String input,
-            TextColor defaultTextColor,
-            TextColor colorTagDefault
-    ) {
-        if (input == null) {
-            return List.of(Component.empty());
-        }
-
-        final String token = "<ability>";
-
-        if (!input.contains(token)) {
-            return parseMarkupLinesNoAbility(
-                    input,
-                    defaultTextColor,
-                    colorTagDefault
-            );
-        }
-
-        List<Component> result = new ArrayList<>();
-        String remaining = input;
-
-        while (true) {
-            int index = remaining.indexOf(token);
-
-            if (index == -1) {
-                result.addAll(
-                        parseMarkupLinesNoAbility(
-                                remaining,
-                                defaultTextColor,
-                                colorTagDefault
-                        )
-                );
-
-                break;
-            }
-
-            String before = remaining.substring(0, index);
-
-            if (!before.isEmpty()) {
-                result.addAll(
-                        parseMarkupLinesNoAbility(
-                                before,
-                                defaultTextColor,
-                                colorTagDefault
-                        )
-                );
-            }
-
-            result.addAll(
-                    parseMarkupLinesNoAbility(
-                            getSingleAbilityPrefix(),
-                            defaultTextColor,
-                            colorTagDefault
-                    )
-            );
-
-            remaining = remaining.substring(
-                    index + token.length()
-            );
         }
 
         return result;
@@ -1044,30 +954,6 @@ public final class ComponentUtils {
         }
 
         return gradientComponentToMarkupString(displayName);
-    }
-
-    public static String getAbilityPrefix() {
-        return getSingleAbilityPrefix();
-    }
-
-    public static String getSingleAbilityPrefix() {
-        return "<bold>>> Spezielle Fähigkeit <<</bold>";
-    }
-
-    public static String getAbilitiesPrefix() {
-        return "<bold>>> Spezielle Fähigkeiten <<</bold>";
-    }
-
-    public static String getUpgradePrefix() {
-        return "<bold>>> Verbesserungskosten <<</bold>";
-    }
-
-    public static String getEnchantmentsPrefix() {
-        return "<bold>>> Verzauberungen <<</bold>";
-    }
-
-    public static String getSingleEnchantmentPrefix() {
-        return "<bold>>> Verzauberung <<</bold>";
     }
 
     private static int clamp(int value) {
