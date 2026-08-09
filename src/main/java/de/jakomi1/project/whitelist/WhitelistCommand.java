@@ -1,6 +1,6 @@
 package de.jakomi1.project.whitelist;
 
-import de.jakomi1.project.command.CustomCommand;
+import de.jakomi1.command.CustomCommand;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;

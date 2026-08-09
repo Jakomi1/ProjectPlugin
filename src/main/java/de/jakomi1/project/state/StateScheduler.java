@@ -1,7 +1,7 @@
 package de.jakomi1.project.state;
 
 import de.jakomi1.project.ProjectServer;
-import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.scheduler.Scheduler;
 
 import java.time.LocalDate;
 import java.time.ZoneId;

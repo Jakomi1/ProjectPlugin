@@ -1,6 +1,6 @@
-package de.jakomi1.project.permission;
+package de.jakomi1.permission;
 
-import de.jakomi1.project.listener.EventListener;
+import de.jakomi1.listener.EventListener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;

@@ -12,7 +12,7 @@ import de.jakomi1.project.AutoManager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.project.invsee.listener.InvseeListener;
 import de.jakomi1.project.invsee.session.InvseeSessionManager;
-import de.jakomi1.project.permission.Role;
+import de.jakomi1.permission.Role;
 
 import java.util.Locale;
 

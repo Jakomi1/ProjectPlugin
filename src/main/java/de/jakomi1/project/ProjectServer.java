@@ -2,13 +2,15 @@ package de.jakomi1.project;
 
 import de.jakomi1.database.table.GlobalSettingsTable;
 import de.jakomi1.database.table.SkinTable;
-import de.jakomi1.project.biome.BiomeManager;
+import de.jakomi1.biome.BiomeManager;
 import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.invsee.InvseeManager;
-import de.jakomi1.project.permission.RoleManager;
+import de.jakomi1.project.link.LinkManager;
+import de.jakomi1.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
-import de.jakomi1.project.region.RegionProtection;
-import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.project.playtime.PlaytimeManager;
+import de.jakomi1.region.RegionProtection;
+import de.jakomi1.scheduler.Scheduler;
 import de.jakomi1.project.scoreboard.ScoreboardManager;
 import de.jakomi1.project.skin.SkinManager;
 import de.jakomi1.project.state.StateManager;
@@ -16,7 +18,7 @@ import de.jakomi1.project.tab.NametagManager;
 import de.jakomi1.project.tab.TabManager;
 import de.jakomi1.project.team.TeamManager;
 import de.jakomi1.project.whitelist.WhitelistManager;
-import de.jakomi1.project.world.WorldPerformance;
+import de.jakomi1.world.WorldPerformance;
 import net.kyori.adventure.text.Component;
 
 import java.util.List;
@@ -42,6 +44,8 @@ public class ProjectServer {
     private final WhitelistManager whitelistManager;
     private final ScoreboardManager scoreboardManager;
     private final TeamManager teamManager;
+    private final PlaytimeManager playtimeManager;
+    private final LinkManager linkManager;
 
     private final List<AutoManager> autoManagers;
 
@@ -75,12 +79,17 @@ public class ProjectServer {
         this.whitelistManager = new WhitelistManager(this);
         this.scoreboardManager = new ScoreboardManager(this);
         this.teamManager = new TeamManager(this);
+        this.playtimeManager = new PlaytimeManager(this);
+        this.linkManager = new LinkManager(this);
 
         this.autoManagers = List.of(
                 invseeManager,
                 whitelistManager,
                 scoreboardManager,
-                teamManager
+                teamManager,
+                biomeManager,
+                playtimeManager,
+                linkManager
         );
     }
 
@@ -148,6 +157,14 @@ public class ProjectServer {
         return teamManager;
     }
 
+    public PlaytimeManager playtime() {
+        return playtimeManager;
+    }
+
+    public LinkManager links() {
+        return linkManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -187,7 +204,9 @@ public class ProjectServer {
                 biomeManager,
                 whitelistManager,
                 scoreboardManager,
-                teamManager
+                teamManager,
+                playtimeManager,
+                linkManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();

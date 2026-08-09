@@ -2,7 +2,7 @@ package de.jakomi1.project.combat;
 
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
-import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.scheduler.Scheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 

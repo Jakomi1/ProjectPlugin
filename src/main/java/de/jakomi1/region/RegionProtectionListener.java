@@ -1,6 +1,6 @@
-package de.jakomi1.project.region;
+package de.jakomi1.region;
 
-import de.jakomi1.project.listener.EventListener;
+import de.jakomi1.listener.EventListener;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;

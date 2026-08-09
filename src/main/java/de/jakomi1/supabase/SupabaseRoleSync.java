@@ -1,12 +1,11 @@
 package de.jakomi1.supabase;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import de.jakomi1.project.permission.Role;
-import de.jakomi1.project.permission.RoleManager;
-import de.jakomi1.project.permission.RoleTable;
-import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.permission.Role;
+import de.jakomi1.permission.RoleManager;
+import de.jakomi1.permission.RoleTable;
+import de.jakomi1.scheduler.Scheduler;
 
 import java.util.HashMap;
 import java.util.Map;

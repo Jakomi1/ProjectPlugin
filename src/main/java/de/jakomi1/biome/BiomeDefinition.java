@@ -1,4 +1,4 @@
-package de.jakomi1.project.biome;
+package de.jakomi1.biome;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package de.jakomi1.project.command;
+package de.jakomi1.command;
 
 import de.jakomi1.project.ProjectPlugin;
 import de.jakomi1.project.Registerable;

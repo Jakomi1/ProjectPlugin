@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import de.jakomi1.project.ProjectPlugin;
-import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.scheduler.Scheduler;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

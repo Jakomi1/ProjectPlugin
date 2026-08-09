@@ -1,4 +1,4 @@
-package de.jakomi1.project.region;
+package de.jakomi1.region;
 
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;

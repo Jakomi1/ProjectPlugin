@@ -11,7 +11,7 @@ package de.jakomi1.project.invsee.listener;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.invsee.ItemCategories;
 import de.jakomi1.project.invsee.session.InvseeSession;
-import de.jakomi1.project.listener.EventListener;
+import de.jakomi1.listener.EventListener;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

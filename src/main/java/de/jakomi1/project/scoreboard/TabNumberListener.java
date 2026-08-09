@@ -1,6 +1,6 @@
 package de.jakomi1.project.scoreboard;
 
-import de.jakomi1.project.listener.EventListener;
+import de.jakomi1.listener.EventListener;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;

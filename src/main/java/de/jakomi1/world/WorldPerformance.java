@@ -1,4 +1,4 @@
-package de.jakomi1.project.world;
+package de.jakomi1.world;
 
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;

@@ -1,4 +1,4 @@
-package de.jakomi1.project.permission;
+package de.jakomi1.permission;
 
 import de.jakomi1.database.Column;
 import de.jakomi1.database.DataType;

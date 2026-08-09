@@ -1,4 +1,4 @@
-package de.jakomi1.project.listener;
+package de.jakomi1.listener;
 
 import de.jakomi1.project.ProjectPlugin;
 import de.jakomi1.project.Registerable;

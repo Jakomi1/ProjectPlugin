@@ -1,7 +1,7 @@
 package de.jakomi1.project.ping;
 
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
-import de.jakomi1.project.listener.EventListener;
+import de.jakomi1.listener.EventListener;
 import de.jakomi1.util.CenterMessage;
 import net.kyori.adventure.text.Component;
 import org.bukkit.event.EventHandler;

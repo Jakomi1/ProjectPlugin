@@ -1,7 +1,7 @@
 package de.jakomi1.project.state;
 
-import de.jakomi1.project.permission.Role;
-import de.jakomi1.project.permission.RoleManager;
+import de.jakomi1.permission.Role;
+import de.jakomi1.permission.RoleManager;
 
 import java.util.LinkedHashSet;
 import java.util.Locale;

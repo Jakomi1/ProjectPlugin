@@ -1,4 +1,4 @@
-package de.jakomi1.project.scheduler;
+package de.jakomi1.scheduler;
 
 import de.jakomi1.project.ProjectPlugin;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
