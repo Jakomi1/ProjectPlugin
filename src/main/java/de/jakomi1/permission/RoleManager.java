@@ -21,9 +21,10 @@ public final class RoleManager implements Manager {
 
     private final ProjectServer server;
     private final RoleRegistry registry;
+    private final Map<UUID, List<PermissionAttachment>> attachments = new HashMap<>();
+
     private RoleTable table;
     private RolePermissionTable rolePermissions;
-    private final Map<UUID, List<PermissionAttachment>> attachments = new HashMap<>();
 
     private SupabaseRoleSync supabaseSync;
     private RolePlayerListener playerListener;
@@ -55,38 +56,11 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        if (!tablesRegistered) {
-            table = new RoleTable();
-            rolePermissions = new RolePermissionTable();
-
-            table.register(server.plugin());
-            rolePermissions.register(server.plugin());
-
-            table = server.plugin()
-                    .getDatabase()
-                    .getTable(RoleTable.class);
-
-            rolePermissions = server.plugin()
-                    .getDatabase()
-                    .getTable(RolePermissionTable.class);
-
-            if (table == null) {
-                throw new IllegalStateException(
-                        "RoleTable konnte nicht aus der Database geladen werden."
-                );
-            }
-
-            if (rolePermissions == null) {
-                throw new IllegalStateException(
-                        "RolePermissionTable konnte nicht aus der Database geladen werden."
-                );
-            }
-
-            registerPermissions();
-            tablesRegistered = true;
-        }
+        initializeTables();
 
         enabled = true;
+
+        registerPermissions();
 
         playerListener = new RolePlayerListener(this);
         playerListener.register(server.plugin());
@@ -161,19 +135,21 @@ public final class RoleManager implements Manager {
     }
 
     public RoleTable table() {
-        requireInitialized();
+        initializeTables();
         return table;
     }
 
     public RolePermissionTable rolePermissions() {
-        requireInitialized();
+        initializeTables();
         return rolePermissions;
     }
 
     public Role roleOf(UUID uuid) {
-        if (uuid == null || !tablesRegistered) {
+        if (uuid == null) {
             return Role.MEMBER;
         }
+
+        initializeTables();
 
         return table.getRole(uuid);
     }
@@ -191,9 +167,10 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         Player player = Bukkit.getPlayer(uuid);
+
         String name = player != null
                 ? player.getName()
                 : table.getName(uuid);
@@ -212,7 +189,7 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         table.block(uuid);
 
@@ -230,7 +207,7 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         table.removeEntry(uuid);
 
@@ -244,11 +221,11 @@ public final class RoleManager implements Manager {
     }
 
     public RoleManager recordName(Player player) {
-        if (player == null || !enabled) {
+        if (player == null) {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         table.setName(
                 player.getUniqueId(),
@@ -291,7 +268,7 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         rolePermissions.addPermission(role, permission);
 
@@ -307,7 +284,7 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         rolePermissions.removePermission(role, permission);
 
@@ -323,7 +300,7 @@ public final class RoleManager implements Manager {
             return this;
         }
 
-        requireInitialized();
+        initializeTables();
 
         removeAttachments(player);
 
@@ -444,11 +421,37 @@ public final class RoleManager implements Manager {
         }
     }
 
-    private void requireInitialized() {
-        if (!tablesRegistered || table == null || rolePermissions == null) {
+    private void initializeTables() {
+        if (tablesRegistered) {
+            return;
+        }
+
+        table = new RoleTable();
+        rolePermissions = new RolePermissionTable();
+
+        table.register(server.plugin());
+        rolePermissions.register(server.plugin());
+
+        table = server.plugin()
+                .getDatabase()
+                .getTable(RoleTable.class);
+
+        rolePermissions = server.plugin()
+                .getDatabase()
+                .getTable(RolePermissionTable.class);
+
+        if (table == null) {
             throw new IllegalStateException(
-                    "RoleManager ist noch nicht initialisiert."
+                    "RoleTable konnte nicht registriert werden."
             );
         }
+
+        if (rolePermissions == null) {
+            throw new IllegalStateException(
+                    "RolePermissionTable konnte nicht registriert werden."
+            );
+        }
+
+        tablesRegistered = true;
     }
 }
