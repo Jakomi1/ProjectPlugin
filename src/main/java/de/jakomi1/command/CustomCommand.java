@@ -49,19 +49,10 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
         return Collections.emptyList();
     }
 
-    /**
-     * Schickt dem Sender die Usage-Zeile dieses Befehls.
-     */
     default void sendUsage(@NotNull CommandSender sender) {
         sender.sendMessage(Component.text(usage(), NamedTextColor.RED));
     }
 
-    /**
-     * Prüft, ob genügend Argumente übergeben wurden. Falls nicht, wird die
-     * Usage automatisch ausgegeben.
-     *
-     * @return true, wenn genügend Argumente vorhanden sind.
-     */
     default boolean requireArgs(@NotNull CommandSender sender, @NotNull String[] args, int required) {
         if (args.length >= required) return true;
 
