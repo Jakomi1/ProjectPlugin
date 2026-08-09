@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.UUID;
 
 public final class StateManager {
 
@@ -121,7 +122,11 @@ public final class StateManager {
     }
 
     public boolean allowsJoin() {
-        return settings(currentState()).joinAllowed();
+        return allowsJoin(null);
+    }
+
+    public boolean allowsJoin(UUID uuid) {
+        return settings(currentState()).join().allows(server.permissions(), uuid);
     }
 
     public Component kickMessage() {

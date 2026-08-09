@@ -14,7 +14,7 @@ public final class StateJoinListener extends EventListener {
 
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
-        if (!manager.allowsJoin()) {
+        if (!manager.allowsJoin(event.getUniqueId())) {
             event.disallow(
                     AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
                     manager.kickMessage()

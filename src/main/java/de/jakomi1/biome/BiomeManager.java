@@ -167,6 +167,10 @@ public final class BiomeManager implements AutoManager {
         server.scheduler().runGlobal(() -> applyDatapack());
     }
 
+    public void redeploy() {
+        deploy();
+    }
+
     public void clear() {
         biomes.clear();
     }

@@ -7,6 +7,8 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.concurrent.TimeUnit;
+
 public final class Scheduler {
 
     private static final boolean isFolia;
@@ -53,10 +55,25 @@ public final class Scheduler {
         return Math.max(ticks, 1L);
     }
 
+    public static long toTicks(long millis) {
+        return Math.max(millis / 50L, 1L);
+    }
+
+    public static long ticksToMillis(long ticks) {
+        return Math.max(ticks, 0L) * 50L;
+    }
+
     public void runAsync(Runnable runnable) {
         if (!enabled()) return;
 
         Bukkit.getAsyncScheduler().runNow(plugin, task -> runnable.run());
+    }
+
+    public void runAsyncLater(Runnable runnable, long delayTicks) {
+        if (!enabled()) return;
+
+        long delay = safeDelay(delayTicks);
+        Bukkit.getAsyncScheduler().runDelayed(plugin, task -> runnable.run(), delay * 50L, TimeUnit.MILLISECONDS);
     }
 
     public void runGlobal(Runnable runnable) {
@@ -79,6 +96,22 @@ public final class Scheduler {
         }
     }
 
+    public Task runRegionLater(Location location, Runnable runnable, long delayTicks) {
+        if (!scheduleable(location)) return Task.noop();
+
+        long delay = safeDelay(delayTicks);
+
+        if (isFolia) {
+            ScheduledTask foliaTask = Bukkit.getRegionScheduler()
+                    .runDelayed(plugin, location, task -> runnable.run(), delay);
+            return new Task(foliaTask);
+        } else {
+            BukkitTask bukkitTask = Bukkit.getScheduler()
+                    .runTaskLater(plugin, runnable, delay);
+            return new Task(bukkitTask);
+        }
+    }
+
     public void runEntity(Entity entity, Runnable runnable) {
         if (!enabled() || entity == null || !entity.isValid()) return;
 
@@ -98,6 +131,28 @@ public final class Scheduler {
             entity.getScheduler().runDelayed(plugin, task -> runnable.run(), () -> {
             }, delay);
         } catch (Throwable ignored) {
+        }
+    }
+
+    public Task runEntityTimer(Entity entity, Runnable runnable, long delayTicks, long periodTicks) {
+        if (!enabled() || entity == null || !entity.isValid()) return Task.noop();
+
+        long delay = safeDelay(delayTicks);
+        long period = safePeriod(periodTicks);
+
+        if (isFolia) {
+            try {
+                ScheduledTask foliaTask = entity.getScheduler()
+                        .runAtFixedRate(plugin, task -> runnable.run(), () -> {
+                        }, delay, period);
+                return new Task(foliaTask);
+            } catch (Throwable ignored) {
+                return Task.noop();
+            }
+        } else {
+            BukkitTask bukkitTask = Bukkit.getScheduler()
+                    .runTaskTimer(plugin, runnable, delay, period);
+            return new Task(bukkitTask);
         }
     }
 

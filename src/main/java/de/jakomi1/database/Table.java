@@ -8,9 +8,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public abstract class Table<K, V> implements Registerable {
 
@@ -106,6 +110,41 @@ public abstract class Table<K, V> implements Registerable {
 
     public final Set<K> keys() {
         return Set.copyOf(cache.keySet());
+    }
+
+    public final List<V> values() {
+        return List.copyOf(cache.values());
+    }
+
+    public final Set<Map.Entry<K, V>> entrySet() {
+        return Set.copyOf(cache.entrySet());
+    }
+
+    public final V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        if (key == null || mappingFunction == null) return null;
+
+        V value = cache.get(key);
+        if (value != null) return value;
+
+        value = mappingFunction.apply(key);
+        if (value == null) return null;
+
+        put(key, value);
+        return value;
+    }
+
+    public final Optional<V> findBy(Predicate<? super V> predicate) {
+        if (predicate == null) return Optional.empty();
+        return cache.values().stream().filter(predicate).findFirst();
+    }
+
+    /**
+     * Speichert alle veränderten Werte dieser Tabelle asynchron im
+     * globalen Scheduler (funktioniert auf Folia und Paper).
+     */
+    public final void flushAsync() {
+        if (database == null) return;
+        database.scheduler().runGlobal(this::flushNow);
     }
 
     public final void flushNow() {

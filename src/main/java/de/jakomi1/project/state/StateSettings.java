@@ -7,7 +7,7 @@ public final class StateSettings {
 
     private final Component motd;
     private final Component subMotd;
-    private final boolean joinAllowed;
+    private final StateRule join;
     private final Component kickMessage;
     private final boolean hidePlayers;
     private final BorderSettings border;
@@ -18,7 +18,7 @@ public final class StateSettings {
     private StateSettings(Builder builder) {
         this.motd = builder.motd;
         this.subMotd = builder.subMotd;
-        this.joinAllowed = builder.joinAllowed;
+        this.join = builder.join;
         this.kickMessage = builder.kickMessage;
         this.hidePlayers = builder.hidePlayers;
         this.border = builder.border;
@@ -30,7 +30,7 @@ public final class StateSettings {
     public static StateSettings defaults(ServerState state) {
         return switch (state) {
             case STOPPED -> builder()
-                    .joinAllowed(false)
+                    .join(StateRule.none())
                     .hidePlayers(true)
                     .border(BorderSettings.of(100, 0, 0))
                     .subMotd(Component.text("Der Server ist derzeit gestoppt.", NamedTextColor.RED))
@@ -38,20 +38,20 @@ public final class StateSettings {
                     .build();
 
             case STARTED -> builder()
-                    .joinAllowed(true)
+                    .join(StateRule.all())
                     .hidePlayers(false)
                     .border(BorderSettings.of(500, 0, 0))
                     .subMotd(Component.text("Der Server startet gleich...", NamedTextColor.GREEN))
                     .build();
 
             case OPEN -> builder()
-                    .joinAllowed(true)
+                    .join(StateRule.all())
                     .hidePlayers(false)
                     .border(BorderSettings.of(8000, 0, 0))
                     .build();
 
             case CLOSED -> builder()
-                    .joinAllowed(false)
+                    .join(StateRule.none())
                     .hidePlayers(true)
                     .border(BorderSettings.of(1000, 0, 0))
                     .subMotd(Component.text("Der Server ist geschlossen.", NamedTextColor.RED))
@@ -72,8 +72,12 @@ public final class StateSettings {
         return subMotd;
     }
 
+    public StateRule join() {
+        return join;
+    }
+
     public boolean joinAllowed() {
-        return joinAllowed;
+        return join.type() == StateRule.Type.ALL;
     }
 
     public Component kickMessage() {
@@ -104,7 +108,7 @@ public final class StateSettings {
 
         private Component motd;
         private Component subMotd = Component.empty();
-        private boolean joinAllowed = true;
+        private StateRule join = StateRule.all();
         private Component kickMessage = Component.empty();
         private boolean hidePlayers;
         private BorderSettings border;
@@ -116,7 +120,7 @@ public final class StateSettings {
             if (settings == null) return this;
             return motd(settings.motd)
                     .subMotd(settings.subMotd)
-                    .joinAllowed(settings.joinAllowed)
+                    .join(settings.join)
                     .kickMessage(settings.kickMessage)
                     .hidePlayers(settings.hidePlayers)
                     .border(settings.border)
@@ -136,7 +140,12 @@ public final class StateSettings {
         }
 
         public Builder joinAllowed(boolean joinAllowed) {
-            this.joinAllowed = joinAllowed;
+            this.join = joinAllowed ? StateRule.all() : StateRule.none();
+            return this;
+        }
+
+        public Builder join(StateRule rule) {
+            this.join = rule == null ? StateRule.all() : rule;
             return this;
         }
 

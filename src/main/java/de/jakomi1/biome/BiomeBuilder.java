@@ -27,6 +27,18 @@ public final class BiomeBuilder {
     private final List<List<String>> features = new ArrayList<>();
     private final Map<SpawnCategory, List<SpawnEntry>> spawners = new LinkedHashMap<>();
     private final Set<String> tags = new LinkedHashSet<>();
+    private String ambientSoundLoop;
+    private String ambientSoundAdditions;
+    private double ambientSoundAdditionsChance;
+    private String ambientSoundMood;
+    private int ambientSoundMoodTickDelay = 6000;
+    private int ambientSoundMoodBlockSearchExtent = 8;
+    private double ambientSoundMoodOffset = 2.0;
+    private String backgroundMusic;
+    private int backgroundMusicMinDelay = 12000;
+    private int backgroundMusicMaxDelay = 24000;
+    private final List<ParticleEntry> ambientParticles = new ArrayList<>();
+    private boolean increasedFireBurnout;
     private float dimensionTemperature = 0.5F;
     private float dimensionHumidity = 0.0F;
     private float dimensionContinentalness = 0.0F;
@@ -150,6 +162,42 @@ public final class BiomeBuilder {
         return this;
     }
 
+    public BiomeBuilder ambientSoundLoop(String sound) {
+        this.ambientSoundLoop = sound;
+        return this;
+    }
+
+    public BiomeBuilder ambientSoundAdditions(String sound, double tickChance) {
+        this.ambientSoundAdditions = sound;
+        this.ambientSoundAdditionsChance = tickChance;
+        return this;
+    }
+
+    public BiomeBuilder ambientSoundMood(String sound, int tickDelay, int blockSearchExtent, double offset) {
+        this.ambientSoundMood = sound;
+        this.ambientSoundMoodTickDelay = tickDelay;
+        this.ambientSoundMoodBlockSearchExtent = blockSearchExtent;
+        this.ambientSoundMoodOffset = offset;
+        return this;
+    }
+
+    public BiomeBuilder backgroundMusic(String sound, int minDelay, int maxDelay) {
+        this.backgroundMusic = sound;
+        this.backgroundMusicMinDelay = minDelay;
+        this.backgroundMusicMaxDelay = maxDelay;
+        return this;
+    }
+
+    public BiomeBuilder ambientParticle(String type, double probability) {
+        this.ambientParticles.add(new ParticleEntry(type, probability));
+        return this;
+    }
+
+    public BiomeBuilder increasedFireBurnout(boolean increasedFireBurnout) {
+        this.increasedFireBurnout = increasedFireBurnout;
+        return this;
+    }
+
     public BiomeBuilder dimensionParameters(float temperature, float humidity, float continentalness, float erosion, float depth, float weirdness) {
         this.dimensionTemperature = temperature;
         this.dimensionHumidity = humidity;
@@ -229,6 +277,54 @@ public final class BiomeBuilder {
         return tags;
     }
 
+    String ambientSoundLoop() {
+        return ambientSoundLoop;
+    }
+
+    String ambientSoundAdditions() {
+        return ambientSoundAdditions;
+    }
+
+    double ambientSoundAdditionsChance() {
+        return ambientSoundAdditionsChance;
+    }
+
+    String ambientSoundMood() {
+        return ambientSoundMood;
+    }
+
+    int ambientSoundMoodTickDelay() {
+        return ambientSoundMoodTickDelay;
+    }
+
+    int ambientSoundMoodBlockSearchExtent() {
+        return ambientSoundMoodBlockSearchExtent;
+    }
+
+    double ambientSoundMoodOffset() {
+        return ambientSoundMoodOffset;
+    }
+
+    String backgroundMusic() {
+        return backgroundMusic;
+    }
+
+    int backgroundMusicMinDelay() {
+        return backgroundMusicMinDelay;
+    }
+
+    int backgroundMusicMaxDelay() {
+        return backgroundMusicMaxDelay;
+    }
+
+    List<ParticleEntry> ambientParticles() {
+        return ambientParticles;
+    }
+
+    boolean increasedFireBurnout() {
+        return increasedFireBurnout;
+    }
+
     float dimensionTemperature() {
         return dimensionTemperature;
     }
@@ -255,5 +351,23 @@ public final class BiomeBuilder {
 
     private static String toHex(int rgb) {
         return String.format("#%02x%02x%02x", (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    }
+
+    static final class ParticleEntry {
+        private final String type;
+        private final double probability;
+
+        ParticleEntry(String type, double probability) {
+            this.type = type;
+            this.probability = probability;
+        }
+
+        String type() {
+            return type;
+        }
+
+        double probability() {
+            return probability;
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import de.jakomi1.util.PackFormat;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -78,16 +79,18 @@ final class BiomeDatapack {
     }
 
     private JsonObject packMcmeta() {
+        int format = PackFormat.current();
+
         JsonObject pack = new JsonObject();
         pack.addProperty("description", description);
 
         JsonArray minFormat = new JsonArray();
-        minFormat.add(107);
+        minFormat.add(format);
         minFormat.add(1);
         pack.add("min_format", minFormat);
 
         JsonArray maxFormat = new JsonArray();
-        maxFormat.add(107);
+        maxFormat.add(format);
         maxFormat.add(1);
         pack.add("max_format", maxFormat);
 
@@ -109,15 +112,25 @@ final class BiomeDatapack {
         if (biome.waterFogColor() != null) {
             attributes.addProperty("minecraft:visual/water_fog_color", biome.waterFogColor());
         }
+        if (biome.increasedFireBurnout()) {
+            attributes.addProperty("minecraft:gameplay/increased_fire_burnout", true);
+        }
+        addAmbientSounds(attributes, biome);
+        addBackgroundMusic(attributes, biome);
+        addAmbientParticles(attributes, biome);
         if (attributes.size() > 0) {
             root.add("attributes", attributes);
         }
 
-        JsonArray carvers = new JsonArray();
-        for (String carver : biome.carvers()) {
-            carvers.add(carver);
+        if (biome.carvers().size() == 1) {
+            root.addProperty("carvers", biome.carvers().get(0));
+        } else {
+            JsonArray carvers = new JsonArray();
+            for (String carver : biome.carvers()) {
+                carvers.add(carver);
+            }
+            root.add("carvers", carvers);
         }
-        root.add("carvers", carvers);
 
         root.addProperty("downfall", biome.downfall());
 
@@ -167,6 +180,62 @@ final class BiomeDatapack {
         root.addProperty("temperature", biome.temperature());
 
         return root;
+    }
+
+    private void addAmbientSounds(JsonObject attributes, BiomeDefinition biome) {
+        String loop = biome.ambientSoundLoop();
+        String additions = biome.ambientSoundAdditions();
+        String mood = biome.ambientSoundMood();
+        if (loop == null && additions == null && mood == null) return;
+
+        JsonObject sounds = new JsonObject();
+        if (additions != null) {
+            JsonObject additionsObject = new JsonObject();
+            additionsObject.addProperty("sound", additions);
+            additionsObject.addProperty("tick_chance", biome.ambientSoundAdditionsChance());
+            sounds.add("additions", additionsObject);
+        }
+        if (loop != null) {
+            sounds.addProperty("loop", loop);
+        }
+        if (mood != null) {
+            JsonObject moodObject = new JsonObject();
+            moodObject.addProperty("block_search_extent", biome.ambientSoundMoodBlockSearchExtent());
+            moodObject.addProperty("offset", biome.ambientSoundMoodOffset());
+            moodObject.addProperty("sound", mood);
+            moodObject.addProperty("tick_delay", biome.ambientSoundMoodTickDelay());
+            sounds.add("mood", moodObject);
+        }
+        attributes.add("minecraft:audio/ambient_sounds", sounds);
+    }
+
+    private void addBackgroundMusic(JsonObject attributes, BiomeDefinition biome) {
+        String music = biome.backgroundMusic();
+        if (music == null) return;
+
+        JsonObject musicObject = new JsonObject();
+        musicObject.addProperty("max_delay", biome.backgroundMusicMaxDelay());
+        musicObject.addProperty("min_delay", biome.backgroundMusicMinDelay());
+        musicObject.addProperty("sound", music);
+
+        JsonObject defaultMusic = new JsonObject();
+        defaultMusic.add("default", musicObject);
+        attributes.add("minecraft:audio/background_music", defaultMusic);
+    }
+
+    private void addAmbientParticles(JsonObject attributes, BiomeDefinition biome) {
+        if (biome.ambientParticles().isEmpty()) return;
+
+        JsonArray particles = new JsonArray();
+        for (BiomeBuilder.ParticleEntry entry : biome.ambientParticles()) {
+            JsonObject particleObject = new JsonObject();
+            JsonObject particle = new JsonObject();
+            particle.addProperty("type", entry.type());
+            particleObject.add("particle", particle);
+            particleObject.addProperty("probability", entry.probability());
+            particles.add(particleObject);
+        }
+        attributes.add("minecraft:visual/ambient_particles", particles);
     }
 
     private Map<String, Set<String>> collectTags() {

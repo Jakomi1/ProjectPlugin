@@ -25,6 +25,18 @@ public final class BiomeDefinition {
     private final List<List<String>> features;
     private final Map<SpawnCategory, List<SpawnEntry>> spawners;
     private final Set<String> tags;
+    private final String ambientSoundLoop;
+    private final String ambientSoundAdditions;
+    private final double ambientSoundAdditionsChance;
+    private final String ambientSoundMood;
+    private final int ambientSoundMoodTickDelay;
+    private final int ambientSoundMoodBlockSearchExtent;
+    private final double ambientSoundMoodOffset;
+    private final String backgroundMusic;
+    private final int backgroundMusicMinDelay;
+    private final int backgroundMusicMaxDelay;
+    private final List<BiomeBuilder.ParticleEntry> ambientParticles;
+    private final boolean increasedFireBurnout;
     private final float dimensionTemperature;
     private final float dimensionHumidity;
     private final float dimensionContinentalness;
@@ -56,6 +68,18 @@ public final class BiomeDefinition {
         }
         this.spawners = Collections.unmodifiableMap(spawnerCopy);
         this.tags = Collections.unmodifiableSet(new LinkedHashSet<>(builder.tags()));
+        this.ambientSoundLoop = builder.ambientSoundLoop();
+        this.ambientSoundAdditions = builder.ambientSoundAdditions();
+        this.ambientSoundAdditionsChance = builder.ambientSoundAdditionsChance();
+        this.ambientSoundMood = builder.ambientSoundMood();
+        this.ambientSoundMoodTickDelay = builder.ambientSoundMoodTickDelay();
+        this.ambientSoundMoodBlockSearchExtent = builder.ambientSoundMoodBlockSearchExtent();
+        this.ambientSoundMoodOffset = builder.ambientSoundMoodOffset();
+        this.backgroundMusic = builder.backgroundMusic();
+        this.backgroundMusicMinDelay = builder.backgroundMusicMinDelay();
+        this.backgroundMusicMaxDelay = builder.backgroundMusicMaxDelay();
+        this.ambientParticles = Collections.unmodifiableList(new ArrayList<>(builder.ambientParticles()));
+        this.increasedFireBurnout = builder.increasedFireBurnout();
         this.dimensionTemperature = builder.dimensionTemperature();
         this.dimensionHumidity = builder.dimensionHumidity();
         this.dimensionContinentalness = builder.dimensionContinentalness();
@@ -126,6 +150,54 @@ public final class BiomeDefinition {
 
     public Set<String> tags() {
         return tags;
+    }
+
+    public String ambientSoundLoop() {
+        return ambientSoundLoop;
+    }
+
+    public String ambientSoundAdditions() {
+        return ambientSoundAdditions;
+    }
+
+    public double ambientSoundAdditionsChance() {
+        return ambientSoundAdditionsChance;
+    }
+
+    public String ambientSoundMood() {
+        return ambientSoundMood;
+    }
+
+    public int ambientSoundMoodTickDelay() {
+        return ambientSoundMoodTickDelay;
+    }
+
+    public int ambientSoundMoodBlockSearchExtent() {
+        return ambientSoundMoodBlockSearchExtent;
+    }
+
+    public double ambientSoundMoodOffset() {
+        return ambientSoundMoodOffset;
+    }
+
+    public String backgroundMusic() {
+        return backgroundMusic;
+    }
+
+    public int backgroundMusicMinDelay() {
+        return backgroundMusicMinDelay;
+    }
+
+    public int backgroundMusicMaxDelay() {
+        return backgroundMusicMaxDelay;
+    }
+
+    public List<BiomeBuilder.ParticleEntry> ambientParticles() {
+        return ambientParticles;
+    }
+
+    public boolean increasedFireBurnout() {
+        return increasedFireBurnout;
     }
 
     public float dimensionTemperature() {

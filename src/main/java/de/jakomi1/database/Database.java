@@ -1,6 +1,7 @@
 package de.jakomi1.database;
 
 import de.jakomi1.project.ProjectPlugin;
+import de.jakomi1.scheduler.Scheduler;
 
 import java.io.File;
 import java.sql.Connection;
@@ -14,14 +15,22 @@ import java.util.Map;
 
 public final class Database {
 
+    private static final long DEFAULT_FLUSH_INTERVAL_TICKS = 300L;
+
     private final ProjectPlugin plugin;
+    private final Scheduler scheduler;
     private Connection connection;
     private final List<Table<?, ?>> tables = new ArrayList<>();
     private final Map<Class<? extends Table<?, ?>>, Table<?, ?>> tableRegistry = new HashMap<>();
     private File pluginFolder;
 
+    private boolean autoFlush = true;
+    private long flushIntervalTicks = DEFAULT_FLUSH_INTERVAL_TICKS;
+    private Scheduler.Task flushTask;
+
     public Database(ProjectPlugin plugin) {
         this.plugin = plugin;
+        this.scheduler = new Scheduler(plugin);
         try {
             pluginFolder = plugin.getDataFolder();
             if (!pluginFolder.exists()) pluginFolder.mkdirs();
@@ -34,6 +43,58 @@ public final class Database {
             }
         } catch (SQLException exception) {
             plugin.getLogger().severe(exception.getMessage());
+        }
+        startAutoFlush();
+    }
+
+    /**
+     * Aktiviert oder deaktiviert das periodische Speichern aller veränderten
+     * Tabellen. Standard: aktiviert.
+     */
+    public Database autoFlush(boolean autoFlush) {
+        this.autoFlush = autoFlush;
+        startAutoFlush();
+        return this;
+    }
+
+    public Database flushInterval(long ticks) {
+        this.flushIntervalTicks = Math.max(ticks, 1L);
+        startAutoFlush();
+        return this;
+    }
+
+    public Database flushIntervalSeconds(long seconds) {
+        return flushInterval(Scheduler.toTicks(seconds * 1000L));
+    }
+
+    public boolean autoFlush() {
+        return autoFlush;
+    }
+
+    public long flushIntervalTicks() {
+        return flushIntervalTicks;
+    }
+
+    public Scheduler scheduler() {
+        return scheduler;
+    }
+
+    /**
+     * Stößt einen vollständigen Flush aller Tabellen außerhalb des aktuellen
+     * Threads an (globaler Scheduler, auf Folia und Paper verfügbar).
+     */
+    public void flushAllAsync() {
+        scheduler.runGlobal(this::flushAll);
+    }
+
+    private void startAutoFlush() {
+        if (flushTask != null) {
+            flushTask.cancel();
+            flushTask = null;
+        }
+
+        if (autoFlush && flushIntervalTicks > 0) {
+            flushTask = scheduler.runTimer(this::flushAll, flushIntervalTicks, flushIntervalTicks);
         }
     }
 
@@ -76,6 +137,11 @@ public final class Database {
     }
 
     public void shutdown() {
+        if (flushTask != null) {
+            flushTask.cancel();
+            flushTask = null;
+        }
+
         if (connection == null) return;
 
         try {
