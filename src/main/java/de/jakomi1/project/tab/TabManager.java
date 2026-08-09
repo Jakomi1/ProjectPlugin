@@ -14,12 +14,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
 
-/**
- * Verwaltet die Tab-Liste: Header/Footer (Titel + TPS/MSPT) und den
- * Playerlist-Namen pro Spieler. Der ListName kann optional den
- * Scoreboard-Wert (Todeszahl) hinter dem Namen anzeigen, wie im
- * CrackedAttack-Tab-Fix.
- */
 public final class TabManager implements Manager {
 
     private final ProjectServer server;
@@ -57,28 +51,16 @@ public final class TabManager implements Manager {
         return this;
     }
 
-    /**
-     * Wie oft Header/Footer aktualisiert werden (in Ticks, Standard 120).
-     */
     public TabManager updatePeriod(long ticks) {
         this.updatePeriod = Math.max(ticks, 1L);
         return this;
     }
 
-    /**
-     * Zeigt hinter dem Namen die Todeszahl in der Tab-Liste an
-     * (CrackedAttack-Scoreboard-Fix).
-     */
     public TabManager deaths(boolean showDeaths) {
         this.showDeaths = showDeaths;
         return this;
     }
 
-    /**
-     * Verbindet das System mit dem Rollen-System: ListName wird zu
-     * {@code [Rollen-Display] Name [Tode]}. Standard-Rolle ({@link Role#MEMBER})
-     * zeigt nur den Namen.
-     */
     public TabManager roles(RoleManager roles) {
         this.listNameProvider = player -> {
             Role role = roles.roleOf(player.getUniqueId());
@@ -114,9 +96,6 @@ public final class TabManager implements Manager {
         return enabled;
     }
 
-    /**
-     * Deaktiviert die Tab-Liste: Aktualisierungs-Timer stoppen.
-     */
     @Override
     public void disable() {
         if (!enabled) return;

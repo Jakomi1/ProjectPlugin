@@ -17,14 +17,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/**
- * Region-Schutz basierend auf Biomen (übernommen aus dem RegionChangeListener).
- *
- * Änderungen an Blöcken in geschützten Biomen werden abgefangen. Optional lassen
- * sich sekundäre Biome registrieren, die nur gegen Feuer/Explosionen geschützt
- * sind. Spieler mit Bypass (Standard: Scoreboard-Tag {@code adminmode}) dürfen
- * weiterhin bauen.
- */
 public final class RegionProtection implements Manager {
 
     private final ProjectServer server;
@@ -65,9 +57,6 @@ public final class RegionProtection implements Manager {
         }
     }
 
-    /**
-     * Aktiviert den Schutz und registriert den Listener.
-     */
     @Override
     public RegionProtection enable() {
         if (enabled) return this;
@@ -82,9 +71,6 @@ public final class RegionProtection implements Manager {
         return enabled;
     }
 
-    /**
-     * Deaktiviert den Schutz: Listener abmelden.
-     */
     @Override
     public void disable() {
         if (!enabled) return;
@@ -95,17 +81,11 @@ public final class RegionProtection implements Manager {
         }
     }
 
-    /**
-     * Schützt ein Biome vollständig (wie Spawn).
-     */
     public RegionProtection protect(Biome biome) {
         if (biome != null) primaryBiomes.add(biome);
         return this;
     }
 
-    /**
-     * Schützt ein Biome per Registry-Key (z.B. {@code "crackedattack:spawn"}).
-     */
     public RegionProtection protect(String key) {
         if (key == null) return this;
 
@@ -116,18 +96,12 @@ public final class RegionProtection implements Manager {
         }
     }
 
-    /**
-     * Schützt ein Biome per Registry-Key.
-     */
     public RegionProtection protect(Key key) {
         Biome biome = biome(key);
         if (biome != null) primaryBiomes.add(biome);
         return this;
     }
 
-    /**
-     * Schützt ein Biome nur gegen Feuer/Explosionen (wie Shopping District).
-     */
     public RegionProtection protectSecondary(Biome biome) {
         if (biome != null) secondaryBiomes.add(biome);
         return this;
@@ -149,27 +123,16 @@ public final class RegionProtection implements Manager {
         return this;
     }
 
-    /**
-     * Legt fest, wann ein Spieler vom Schutz ausgenommen ist.
-     * Standard: Spieler mit Scoreboard-Tag {@code adminmode}.
-     */
     public RegionProtection bypass(Predicate<Player> bypass) {
         this.bypass = bypass == null ? player -> false : bypass;
         return this;
     }
 
-    /**
-     * Setzt das Zentrum, um das Glasblöcke beim Rechtsklick zum Spawn teleportieren.
-     * Deaktiviert, solange es {@code null} ist.
-     */
     public RegionProtection glassTeleportCenter(Location center) {
         this.glassTeleportCenter = center;
         return this;
     }
 
-    /**
-     * Ziel des Glas-Teleports (z.B. der Spawn).
-     */
     public RegionProtection spawnTeleport(Location location) {
         this.spawnTeleport = location;
         return this;
@@ -188,18 +151,11 @@ public final class RegionProtection implements Manager {
         return primaryBiomes.contains(biome) || (includeSecondary && secondaryBiomes.contains(biome));
     }
 
-    /**
-     * Prüft, ob eine Aktion an einem Block unterbunden werden muss.
-     */
     public boolean shouldCancel(@Nullable Player player, Block block, boolean includeSecondary) {
         if (block == null || !isProtected(block.getBiome(), includeSecondary)) return false;
         return player == null || !bypass.test(player);
     }
 
-    /**
-     * Behandelt den Glas-Teleport. Liefert {@code true}, wenn der Klick
-     * konsumiert wurde.
-     */
     public boolean handleGlassClick(Player player, Block clickedBlock) {
         if (!glassTeleportEnabled || spawnTeleport == null || glassTeleportCenter == null) return false;
         if (clickedBlock == null || !clickedBlock.getType().name().contains("GLASS")) return false;
@@ -210,23 +166,14 @@ public final class RegionProtection implements Manager {
         return true;
     }
 
-    /**
-     * Items, die per Rechtsklick im geschützten Bereich geblockt werden.
-     */
     public Set<Material> forbiddenInteractItems() {
         return forbiddenInteractItems;
     }
 
-    /**
-     * Items, die über ihren Namen im geschützten Bereich geblockt werden.
-     */
     public Set<Material> forbiddenItemsByName() {
         return forbiddenItemsByName;
     }
 
-    /**
-     * Blöcke, die über ihren Namen im geschützten Bereich geblockt werden.
-     */
     public Set<Material> forbiddenBlocksByName() {
         return forbiddenBlocksByName;
     }

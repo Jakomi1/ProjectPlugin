@@ -49,10 +49,6 @@ import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.ItemStack;
 
-/**
- * Reine Portierung des RegionChangeListeners, die auf {@link RegionProtection}
- * als Konfiguration zugreift statt auf fest verdrahtete Biome.
- */
 public final class RegionProtectionListener extends EventListener {
 
     private final RegionProtection protection;

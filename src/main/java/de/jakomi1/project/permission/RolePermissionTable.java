@@ -5,10 +5,6 @@ import de.jakomi1.database.KeyValueTable;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Lokale Zusatz-Permissions pro Rolle (Key: Rollenname, Value: kommagetrennte
- * Bukkit-Permissions). Diese sind rein lokal und werden nie nach Supabase gepusht.
- */
 public final class RolePermissionTable extends KeyValueTable<String, String> {
 
     private static final String SEPARATOR = ";";
@@ -17,7 +13,6 @@ public final class RolePermissionTable extends KeyValueTable<String, String> {
         super("role_permissions", String.class, String.class, "role", "permissions");
     }
 
-    /** Alle zusaetzlichen Bukkit-Permissions einer Rolle. */
     public Set<String> getPermissions(Role role) {
         if (role == null) return Set.of();
         return parse(get(role.name()));

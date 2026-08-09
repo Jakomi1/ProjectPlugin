@@ -47,13 +47,6 @@ public final class RoleManager implements Manager {
         return registry;
     }
 
-    /**
-     * Aktiviert das Rollen-Permissions-System fuer diesen Server.
-     *
-     * <p>Ist eine Supabase-Synchronisierung über {@link #syncWith(Supabase)}
-     * konfiguriert, werden die Rollen-Definitionen gezogen, die Rollen aus Supabase
-     * uebernommen (lokale Overrides bleiben) und periodisch abgeglichen.</p>
-     */
     @Override
     public RoleManager enable() {
         if (enabled) return this;
@@ -83,10 +76,6 @@ public final class RoleManager implements Manager {
         return enabled;
     }
 
-    /**
-     * Deaktiviert das Rollen-System: Sync stoppen, Listener abmelden und
-     * alle getrackten Permission-Attachments entfernen.
-     */
     @Override
     public void disable() {
         if (!enabled) return;
@@ -101,11 +90,6 @@ public final class RoleManager implements Manager {
         Bukkit.getOnlinePlayers().forEach(this::cleanup);
     }
 
-    /**
-     * Verbindet das Rollen-System mit Supabase (read-only, nur GET).
-     * Rollen-Definitionen ({@code roles}) und Zuordnungen ({@code player_roles})
-     * werden gezogen; lokale Overrides bleiben erhalten.
-     */
     public RoleManager syncWith(Supabase supabase) {
         this.supabaseSync = new SupabaseRoleSync(supabase, this);
         return this;
@@ -140,10 +124,6 @@ public final class RoleManager implements Manager {
         return roleOf(player.getUniqueId()).inherits(role);
     }
 
-    /**
-     * Weist einem Spieler lokal eine Rolle zu (manueller Override).
-     * Wird nicht nach Supabase gepusht und nicht durch Supabase-Updates ueberschrieben.
-     */
     public RoleManager setRole(UUID uuid, Role role) {
         if (uuid == null || role == null) return this;
 
@@ -155,10 +135,6 @@ public final class RoleManager implements Manager {
         return this;
     }
 
-    /**
-     * Nimmt einem Spieler lokal die Rolle (manueller Override).
-     * Die Entfernung bleibt auch bei Supabase-Updates erhalten.
-     */
     public RoleManager removeRole(UUID uuid) {
         if (uuid == null) return this;
 
@@ -168,9 +144,6 @@ public final class RoleManager implements Manager {
         return this;
     }
 
-    /**
-     * Entfernt einen lokalen Override: Beim naechsten Sync gilt wieder der Supabase-Stand.
-     */
     public RoleManager clearOverride(UUID uuid) {
         if (uuid == null) return this;
 
@@ -180,23 +153,12 @@ public final class RoleManager implements Manager {
         return this;
     }
 
-    /**
-     * Speichert den Spielernamen eines online Spielers lokal.
-     */
     public RoleManager recordName(Player player) {
         if (player == null || !enabled) return this;
         table.setName(player.getUniqueId(), player.getName());
         return this;
     }
 
-    /**
-     * Registriert eine zusaetzliche, projekt-spezifische Rolle (lokal).
-     * Beispiel:
-     * <pre>
-     *   server.permissions().registerRole("BURGER", "Burger-Flipper",
-     *           "#ff9900", "#ffcc66", 6, "MEMBER", "project.command.burger");
-     * </pre>
-     */
     public RoleManager registerRole(String name, String display, String gradient1, String gradient2,
                                     int priority, String parent, String... permissions) {
         Role role = Role.builder(name)
@@ -216,18 +178,12 @@ public final class RoleManager implements Manager {
         return this;
     }
 
-    /**
-     * Fuegt einer Rolle eine zusaetzliche Bukkit-Permission hinzu (lokal gespeichert).
-     */
     public RoleManager addPermission(Role role, String permission) {
         rolePermissions.addPermission(role, permission);
         applyAll();
         return this;
     }
 
-    /**
-     * Entfernt eine zusaetzliche Bukkit-Permission einer Rolle (lokal gespeichert).
-     */
     public RoleManager removePermission(Role role, String permission) {
         rolePermissions.removePermission(role, permission);
         applyAll();
@@ -277,9 +233,6 @@ public final class RoleManager implements Manager {
         }
     }
 
-    /**
-     * Entfernt die getrackten Attachments, wenn ein Spieler offline geht.
-     */
     public void cleanup(Player player) {
         if (player == null) return;
         removeAttachments(player);
@@ -289,10 +242,6 @@ public final class RoleManager implements Manager {
         Bukkit.getOnlinePlayers().forEach(this::apply);
     }
 
-    /**
-     * Registriert (neu) die Bukkit-Permissions aller bekannten Rollen.
-     * Idempotent – bereits registrierte Permissions werden uebersprungen.
-     */
     public void refreshPermissions() {
         registerPermissions();
         applyAll();
@@ -326,9 +275,6 @@ public final class RoleManager implements Manager {
         }
     }
 
-    /**
-     * Standard-Rollen aus CrackedCommunity (RolePlayer), Rollenname als Wert.
-     */
     public static final Map<UUID, String> DEFAULTS = Map.ofEntries(
             Map.entry(UUID.fromString("d6fa4a1b-6e3c-4e3e-a8f8-f7dd4c9ba290"), "OWNER"),
             Map.entry(UUID.fromString("f4af1633-7110-48af-97ec-f5d84e3cd142"), "ADMIN"),

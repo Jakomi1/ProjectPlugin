@@ -21,13 +21,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
-/**
- * Zeigt echte Nametag-Präfixe über den Spielerköpfen.
- *
- * Baut pro Viewer ein unsichtbares NMS-Scoreboard mit {@code PlayerTeam}s auf
- * und gleicht die Mitglieder periodisch ab. Die Team-/Präfix-Logik wird über
- * {@link #team(Function)} / {@link #prefix(Function)} als API konfiguriert.
- */
 public final class NametagManager implements Manager {
 
     private final ProjectServer server;
@@ -48,43 +41,26 @@ public final class NametagManager implements Manager {
         this.bridge = new NmsBridge(server.plugin().getLogger());
     }
 
-    /**
-     * Liefert den Team-Namen eines Spielers oder {@code null}, wenn er kein Team bekommt.
-     */
     public NametagManager team(Function<Player, String> resolver) {
         this.teamResolver = resolver == null ? player -> null : resolver;
         return this;
     }
 
-    /**
-     * Liefert das Präfix (Nametag-Text) eines Spielers.
-     */
     public NametagManager prefix(Function<Player, Component> resolver) {
         this.prefixResolver = resolver == null ? player -> Component.empty() : resolver;
         return this;
     }
 
-    /**
-     * Liefert das Suffix eines Spielers (Standard: leer).
-     */
     public NametagManager suffix(Function<Player, Component> resolver) {
         this.suffixResolver = resolver == null ? player -> Component.empty() : resolver;
         return this;
     }
 
-    /**
-     * Wie oft der Sync-Timer laufen soll (in Ticks, Standard 40).
-     */
     public NametagManager syncPeriod(long ticks) {
         this.syncPeriod = Math.max(ticks, 1L);
         return this;
     }
 
-    /**
-     * Verbindet das System direkt mit dem Rollen-System:
-     * Team-Name = Rollen-Name, Präfix = {@code [Rollen-Display] }.
-     * Spieler mit Standard-Rolle ({@link Role#MEMBER}) bekommen kein Team.
-     */
     public NametagManager roles(RoleManager roles) {
         this.teamResolver = player -> {
             Role role = roles.roleOf(player.getUniqueId());
@@ -113,9 +89,6 @@ public final class NametagManager implements Manager {
         return enabled;
     }
 
-    /**
-     * Deaktiviert die Nametags: Sync-Timer stoppen und alle bekannten Teams verwerfen.
-     */
     @Override
     public void disable() {
         if (!enabled) return;

@@ -20,9 +20,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Registry für aktive Invsee-Sessions.
- */
 public abstract class SessionManager {
 
     private final Set<Session> sessions = new HashSet<>();

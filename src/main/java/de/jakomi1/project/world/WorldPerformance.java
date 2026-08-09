@@ -25,15 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-/**
- * Stellt Simulation-/View-Distanz sowie SpawnLimits & TicksPerSpawn dynamisch
- * anhand der Spielerzahl ein (Portierung des DynamicDistanceManagers).
- *
- * Die Stufen werden aus {@code world.yml} im Plugin-Ordner gelesen und beim
- * Laden automatisch repariert/sortiert. Gibt es die Datei nicht, wird die
- * gebündelte Default-Ressource (Stufen 0 bis 100) in den Plugin-Ordner
- * kopiert.
- */
 public final class WorldPerformance implements Manager {
 
     private static final String[] WORLDS = {"world", "world_nether", "world_the_end"};
@@ -98,9 +89,6 @@ public final class WorldPerformance implements Manager {
         return enabled;
     }
 
-    /**
-     * Deaktiviert das System: Listener abmelden, bestehende Distanzen bleiben unverändert.
-     */
     @Override
     public void disable() {
         if (!enabled) return;
@@ -237,10 +225,6 @@ public final class WorldPerformance implements Manager {
         updateDistances(false);
     }
 
-    /**
-     * Plant eine Neuberechnung auf dem globalen Thread (z.B. nach dem Quit,
-     * da der Spieler dort evtl. noch online ist).
-     */
     public void scheduleUpdate() {
         server.scheduler().runGlobal(this::updateDistances);
     }

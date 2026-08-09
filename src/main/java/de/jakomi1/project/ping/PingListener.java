@@ -19,7 +19,6 @@ public class PingListener extends EventListener {
     private Component mainMotd = Component.empty();
     private Component subMotd = Component.empty();
 
-    /** Sentinel: {@code -1} bedeutet "nicht überschreiben" (Server-Stand bleibt). */
     private int maxPlayers = -1;
     private int numPlayers = -1;
     private boolean hidePlayers = false;

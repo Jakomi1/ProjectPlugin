@@ -16,28 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/**
- * Direkter, <b>read-only</b> REST-Client fuer die Supabase-API (PostgREST).
- *
- * Die Verbindungsdaten sind fest im Projekt vorgegeben:
- * {@link #BASE_URL} (Projekt-URL) und {@link #API_KEY} (Publishable-Key).
- * Es koennen ausschliesslich Daten gelesen werden (GET) – es gibt bewusst
- * keine Schreib-/Loesch-Methoden. Sicherheit wird ueber RLS auf Supabase-Seite geregelt.
- *
- * <p>Alle Methoden koennen gefahrlos von jedem Thread aufgerufen werden.
- * Netzwerkaufrufe sind synchron; die Async-Varianten führen den Request auf einem
- * Hintergrund-Thread aus und liefern das Ergebnis auf dem Main-Thread zurueck.</p>
- *
- * <pre>
- *   Supabase supabase = new Supabase(plugin);
- *   supabase.selectAsync("player_roles", "uuid,role,name", result -> { ... });
- * </pre>
- */
 public final class Supabase {
 
-    /** Fest vorgegebene Projekt-URL. */
     public static final String BASE_URL = "https://juhmwedneayoqfetimvy.supabase.co";
-    /** Fest vorgegebener Publishable-Key (public, RLS-geschuetzt, read-only). */
+    
     public static final String API_KEY = "sb_publishable_iU01w5tDCOETeYJDxGuzcA_X4b06ZET";
 
     private static final String REST_PATH = "/rest/v1/";
@@ -49,9 +31,6 @@ public final class Supabase {
     private final Scheduler scheduler;
     private final String baseUrl;
 
-    /**
-     * Verwendet die fest vorgegebenen Verbindungsdaten ({@link #BASE_URL}, {@link #API_KEY}).
-     */
     public Supabase(ProjectPlugin plugin) {
         this(plugin, BASE_URL);
     }
@@ -64,13 +43,6 @@ public final class Supabase {
                 : baseUrl.replaceAll("/+$", "");
     }
 
-    /**
-     * Zeilen aus einer Tabelle abfragen.
-     *
-     * @param table   Tabellenname (z.B. "player_roles")
-     * @param select  Komma-getrennte Spalten (z.B. "uuid,role,name") oder {@code null} fuer "*"
-     * @param filters Spalten-&gt;Wert Filter (exakter Match, z.B. "role" -&gt; "OWNER")
-     */
     public JsonArray select(String table, String select, Map<String, String> filters) {
         if (!isConfigured() || table == null || table.isBlank()) return new JsonArray();
 
@@ -102,9 +74,6 @@ public final class Supabase {
         return select(table, select, Map.of());
     }
 
-    /**
-     * Zeilen abfragen (asynchron). Das Ergebnis wird auf dem Main-Thread geliefert.
-     */
     public void selectAsync(String table, String select, Map<String, String> filters, Consumer<JsonArray> callback) {
         if (!isConfigured() || callback == null) return;
 

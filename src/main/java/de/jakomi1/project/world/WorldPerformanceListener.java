@@ -5,9 +5,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-/**
- * Aktualisiert die Render-Distanzen, sobald die Spielerzahl sich ändert.
- */
 public final class WorldPerformanceListener extends EventListener {
 
     private final WorldPerformance performance;

@@ -12,18 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Read-only Synchronisierung mit den bestehenden Supabase-Tabellen (nur GET):
- *
- * <ul>
- *   <li>{@code roles} (name, display, priority, color1, color2) – Rollen-Definitionen
- *       werden in die {@link RoleRegistry} uebernommen (BUILTIN/LOCAL bleiben unangetastet).</li>
- *   <li>{@code player_roles} (uuid, role, name) – Zuordnungen werden in die lokale
- *       {@link RoleTable} uebernommen. Manuelle lokale Overrides bleiben erhalten.</li>
- * </ul>
- *
- * Es wird ausschliesslich gelesen; es gibt keine Push-/Delete-Operationen.
- */
 public final class SupabaseRoleSync {
 
     public static final String ROLES_TABLE = "roles";
@@ -44,18 +32,11 @@ public final class SupabaseRoleSync {
         this.roles = roles;
     }
 
-    /**
-     * Wie oft die Rollen aus Supabase gezogen werden (in Ticks, Standard 12000 = 10 Min).
-     */
     public SupabaseRoleSync pullPeriod(long ticks) {
         this.pullPeriod = Math.max(ticks, 1L);
         return this;
     }
 
-    /**
-     * Startet die Synchronisierung: Definitionen ziehen, Zuordnungen ziehen
-     * und periodisch abgleichen.
-     */
     public void enable() {
         if (syncTask != null && !syncTask.isCancelled()) return;
 
@@ -65,19 +46,12 @@ public final class SupabaseRoleSync {
         syncTask = roles.server().scheduler().runTimer(this::pull, pullPeriod, pullPeriod);
     }
 
-    /**
-     * Stoppt die periodische Synchronisierung.
-     */
     public void disable() {
         if (syncTask == null) return;
         syncTask.cancel();
         syncTask = null;
     }
 
-    /**
-     * Zieht die Rollen-Definitionen aus der Supabase-Tabelle {@code roles}
-     * und uebernimmt sie in die {@link RoleRegistry}.
-     */
     public void pullDefinitions() {
         supabase.selectAsync(ROLES_TABLE, SELECT_ROLES, result -> {
             if (result == null || result.size() == 0) return;
@@ -89,10 +63,6 @@ public final class SupabaseRoleSync {
         });
     }
 
-    /**
-     * Zieht alle {@code player_roles} aus Supabase und gleicht die lokale
-     * {@link RoleTable} ab. Manuelle Overrides bleiben erhalten.
-     */
     public void pull() {
         supabase.selectAsync(PLAYER_ROLES_TABLE, SELECT_PLAYER_ROLES, result -> {
             if (result == null || result.size() == 0) return;

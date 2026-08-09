@@ -1,14 +1,21 @@
 package de.jakomi1.project;
 
 import de.jakomi1.database.table.GlobalSettingsTable;
+import de.jakomi1.database.table.SkinTable;
+import de.jakomi1.project.biome.BiomeManager;
+import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
 import de.jakomi1.project.region.RegionProtection;
 import de.jakomi1.project.scheduler.Scheduler;
+import de.jakomi1.project.scoreboard.ScoreboardManager;
+import de.jakomi1.project.skin.SkinManager;
 import de.jakomi1.project.state.StateManager;
 import de.jakomi1.project.tab.NametagManager;
 import de.jakomi1.project.tab.TabManager;
+import de.jakomi1.project.team.TeamManager;
+import de.jakomi1.project.whitelist.WhitelistManager;
 import de.jakomi1.project.world.WorldPerformance;
 import net.kyori.adventure.text.Component;
 
@@ -28,6 +35,16 @@ public class ProjectServer {
     private final RegionProtection regionProtection;
     private final WorldPerformance worldPerformance;
     private final InvseeManager invseeManager;
+    private final SkinTable skinTable;
+    private final SkinManager skinManager;
+    private final CombatManager combatManager;
+    private final BiomeManager biomeManager;
+    private final WhitelistManager whitelistManager;
+    private final ScoreboardManager scoreboardManager;
+    private final TeamManager teamManager;
+
+    private final List<AutoManager> autoManagers;
+
     public ProjectServer(ProjectPlugin plugin) {
         this.plugin = plugin;
         this.scheduler = new Scheduler(plugin);
@@ -42,9 +59,29 @@ public class ProjectServer {
 
         this.nametagManager = new NametagManager(this);
         this.tabManager = new TabManager(this);
+
         this.regionProtection = new RegionProtection(this);
         this.worldPerformance = new WorldPerformance(this);
         this.invseeManager = new InvseeManager(this);
+
+        this.skinTable = new SkinTable();
+        this.skinTable.register(plugin);
+        this.skinManager = new SkinManager(this, skinTable);
+
+        this.combatManager = new CombatManager(this);
+
+        this.biomeManager = new BiomeManager(this);
+
+        this.whitelistManager = new WhitelistManager(this);
+        this.scoreboardManager = new ScoreboardManager(this);
+        this.teamManager = new TeamManager(this);
+
+        this.autoManagers = List.of(
+                invseeManager,
+                whitelistManager,
+                scoreboardManager,
+                teamManager
+        );
     }
 
     public ProjectPlugin plugin() {
@@ -87,6 +124,30 @@ public class ProjectServer {
         return invseeManager;
     }
 
+    public SkinManager skins() {
+        return skinManager;
+    }
+
+    public CombatManager combat() {
+        return combatManager;
+    }
+
+    public BiomeManager biomes() {
+        return biomeManager;
+    }
+
+    public WhitelistManager whitelist() {
+        return whitelistManager;
+    }
+
+    public ScoreboardManager scoreboards() {
+        return scoreboardManager;
+    }
+
+    public TeamManager teams() {
+        return teamManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -106,12 +167,14 @@ public class ProjectServer {
 
     public void registerEverything() {
         plugin.getRegistry().getRegisterable().forEach(registerable -> registerable.register(plugin));
+
+        for (AutoManager manager : autoManagers) {
+            if (manager.auto()) {
+                manager.enable();
+            }
+        }
     }
 
-    /**
-     * Deaktiviert alle aktivierten Manager (Timer/Listener aufräumen).
-     * Wird beim {@link ProjectPlugin#onDisable()} aufgerufen.
-     */
     public void disable() {
         for (Manager manager : List.of(
                 nametagManager,
@@ -119,7 +182,12 @@ public class ProjectServer {
                 worldPerformance,
                 regionProtection,
                 invseeManager,
-                roleManager
+                roleManager,
+                combatManager,
+                biomeManager,
+                whitelistManager,
+                scoreboardManager,
+                teamManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();

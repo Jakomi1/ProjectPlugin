@@ -11,10 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Minimaler Zeit-basierter Cache für geladene Offline-Spieler
- * (Ersatz für Guava {@code CacheBuilder}).
- */
 public final class PlayerCache {
 
     private static final long TTL_MILLIS = 10_000;

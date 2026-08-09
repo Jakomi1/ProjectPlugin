@@ -11,6 +11,9 @@ public final class StateSettings {
     private final Component kickMessage;
     private final boolean hidePlayers;
     private final BorderSettings border;
+    private final StateRule movement;
+    private final StateRule damage;
+    private final StateRule blocks;
 
     private StateSettings(Builder builder) {
         this.motd = builder.motd;
@@ -19,6 +22,9 @@ public final class StateSettings {
         this.kickMessage = builder.kickMessage;
         this.hidePlayers = builder.hidePlayers;
         this.border = builder.border;
+        this.movement = builder.movement;
+        this.damage = builder.damage;
+        this.blocks = builder.blocks;
     }
 
     public static StateSettings defaults(ServerState state) {
@@ -82,6 +88,18 @@ public final class StateSettings {
         return border;
     }
 
+    public StateRule movement() {
+        return movement;
+    }
+
+    public StateRule damage() {
+        return damage;
+    }
+
+    public StateRule blocks() {
+        return blocks;
+    }
+
     public static final class Builder {
 
         private Component motd;
@@ -90,6 +108,22 @@ public final class StateSettings {
         private Component kickMessage = Component.empty();
         private boolean hidePlayers;
         private BorderSettings border;
+        private StateRule movement = StateRule.all();
+        private StateRule damage = StateRule.all();
+        private StateRule blocks = StateRule.all();
+
+        public Builder from(StateSettings settings) {
+            if (settings == null) return this;
+            return motd(settings.motd)
+                    .subMotd(settings.subMotd)
+                    .joinAllowed(settings.joinAllowed)
+                    .kickMessage(settings.kickMessage)
+                    .hidePlayers(settings.hidePlayers)
+                    .border(settings.border)
+                    .movement(settings.movement)
+                    .damage(settings.damage)
+                    .blocks(settings.blocks);
+        }
 
         public Builder motd(Component motd) {
             this.motd = motd;
@@ -118,6 +152,21 @@ public final class StateSettings {
 
         public Builder border(BorderSettings border) {
             this.border = border;
+            return this;
+        }
+
+        public Builder movement(StateRule rule) {
+            this.movement = rule == null ? StateRule.all() : rule;
+            return this;
+        }
+
+        public Builder damage(StateRule rule) {
+            this.damage = rule == null ? StateRule.all() : rule;
+            return this;
+        }
+
+        public Builder blocks(StateRule rule) {
+            this.blocks = rule == null ? StateRule.all() : rule;
             return this;
         }
 

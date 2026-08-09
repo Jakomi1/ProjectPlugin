@@ -23,10 +23,6 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 
-/**
- * Behandelt Klicks in den angezeigten Invsee-Inventaren und schreibt
- * Änderungen zurück zum beobachteten Spieler.
- */
 public final class InvseeListener extends EventListener {
 
     private final InvseeManager manager;

@@ -21,10 +21,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-/**
- * Öffnet das Inventar eines (ggf. offline) Spielers:
- * {@code /invsee <Spieler>}
- */
 public final class InvseeCommand implements CustomCommand {
 
     private final InvseeManager manager;
@@ -50,7 +46,7 @@ public final class InvseeCommand implements CustomCommand {
 
     @Override
     public String permission() {
-        return "invsee.use";
+        return manager.permission();
     }
 
     @Override

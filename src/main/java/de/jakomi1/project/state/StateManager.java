@@ -5,6 +5,7 @@ import de.jakomi1.project.ProjectServer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ public final class StateManager {
     private final GlobalSettingsTable settingsTable;
     private final Map<ServerState, StateSettings> settings = new EnumMap<>(ServerState.class);
     private final StateJoinListener joinListener;
+    private final StateRestrictionListener restrictionListener;
     private final StateScheduler scheduler;
 
     public StateManager(ProjectServer server, GlobalSettingsTable settingsTable) {
@@ -22,6 +24,8 @@ public final class StateManager {
         this.settingsTable = settingsTable;
         this.joinListener = new StateJoinListener(this);
         joinListener.register(server.plugin());
+        this.restrictionListener = new StateRestrictionListener(this);
+        restrictionListener.register(server.plugin());
         this.scheduler = new StateScheduler(server);
 
         for (ServerState state : ServerState.values()) {
@@ -60,17 +64,51 @@ public final class StateManager {
     public StateManager border(ServerState state, BorderSettings border) {
         StateSettings current = settings(state);
         StateSettings updated = StateSettings.builder()
-                .motd(current.motd())
-                .subMotd(current.subMotd())
-                .joinAllowed(current.joinAllowed())
-                .kickMessage(current.kickMessage())
-                .hidePlayers(current.hidePlayers())
+                .from(current)
                 .border(border)
                 .build();
 
         settings.put(state, updated);
         if (state == currentState()) refresh();
         return this;
+    }
+
+    public StateManager movement(ServerState state, StateRule rule) {
+        return rules(state, rule, settings(state).damage(), settings(state).blocks());
+    }
+
+    public StateManager damage(ServerState state, StateRule rule) {
+        return rules(state, settings(state).movement(), rule, settings(state).blocks());
+    }
+
+    public StateManager blocks(ServerState state, StateRule rule) {
+        return rules(state, settings(state).movement(), settings(state).damage(), rule);
+    }
+
+    public StateManager rules(ServerState state, StateRule movement, StateRule damage, StateRule blocks) {
+        StateSettings current = settings(state);
+        StateSettings updated = StateSettings.builder()
+                .from(current)
+                .movement(movement)
+                .damage(damage)
+                .blocks(blocks)
+                .build();
+
+        settings.put(state, updated);
+        if (state == currentState()) refresh();
+        return this;
+    }
+
+    public boolean allowsMovement(Player player) {
+        return player != null && settings(currentState()).movement().allows(server.permissions(), player.getUniqueId());
+    }
+
+    public boolean allowsDamage(Player player) {
+        return player != null && settings(currentState()).damage().allows(server.permissions(), player.getUniqueId());
+    }
+
+    public boolean allowsBreaking(Player player) {
+        return player != null && settings(currentState()).blocks().allows(server.permissions(), player.getUniqueId());
     }
 
     public StateManager schedule(StateSchedule schedule) {

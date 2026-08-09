@@ -35,10 +35,6 @@ import static net.kyori.adventure.text.format.NamedTextColor.GOLD;
 import static net.kyori.adventure.text.format.NamedTextColor.RED;
 import static net.kyori.adventure.text.format.TextDecoration.ITALIC;
 
-/**
- * Eine Invsee-Session: zeigt ein 45-Slot-Inventar (36 Hotbar/Main + 4 Rüstung
- * + Offhand + Cursor + 3 Leerplätze) des beobachteten Spielers.
- */
 public class InvseeSession implements Session {
 
     private final Plugin plugin;

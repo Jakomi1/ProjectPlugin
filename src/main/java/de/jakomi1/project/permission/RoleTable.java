@@ -14,19 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Lokale Spieler-Rollen (Spiegel der Supabase-Tabelle {@code player_roles}).
- *
- * <p>Jede Zeile speichert Rolle, Namen und ein <b>Override-Flag</b>:
- * <ul>
- *   <li>{@code override = 1} – manuelle lokale Zuweisung/Entfernung
- *       (bleibt bei Supabase-Updates erhalten).</li>
- *   <li>{@code override = 0} – synchronisierter Stand aus Supabase
- *       (wird bei Updates uebernommen bzw. entfernt).</li>
- * </ul></p>
- *
- * {@link #sync(Map)} gleicht die Tabelle mit Supabase ab, ohne Overrides zu ueberschreiben.
- */
 public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
 
     private static final String TABLE = "role_assignments";
@@ -45,11 +32,9 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         ));
     }
 
-    /** Eine Rollen-Zeile: Rolle + Name + Override-Flag. */
     public record RoleEntry(Role role, String name, boolean override) {
     }
 
-    /** Ein von Supabase gezogener Stand. */
     public record PlayerRole(Role role, String name) {
     }
 
@@ -77,13 +62,11 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         return entry != null && entry.override();
     }
 
-    /** Manuelle lokale Entfernung: bleibt bei Supabase-Updates entfernt. */
     public boolean isRemoved(UUID uuid) {
         RoleEntry entry = getEntry(uuid);
         return entry != null && entry.override() && entry.role() == null;
     }
 
-    /** Manuelle lokale Zuweisung (Override). */
     public void assign(UUID uuid, Role role, String name) {
         if (uuid == null || role == null) return;
 
@@ -91,7 +74,6 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         flushNow();
     }
 
-    /** Manuelle lokale Entfernung (Override). */
     public void block(UUID uuid) {
         if (uuid == null) return;
 
@@ -99,7 +81,6 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         flushNow();
     }
 
-    /** Synchronisierte Zuweisung (kein Override). */
     public void setRole(UUID uuid, Role role, String name) {
         if (uuid == null || role == null) return;
 
@@ -107,7 +88,6 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         flushNow();
     }
 
-    /** Loescht die Zeile komplett (naechster Sync uebernimmt wieder Supabase). */
     public void removeEntry(UUID uuid) {
         if (uuid == null) return;
 
@@ -115,7 +95,6 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         flushNow();
     }
 
-    /** Aktualisiert nur den Spielernamen einer bestehenden Zeile. */
     public void setName(UUID uuid, String name) {
         if (uuid == null || name == null) return;
 
@@ -127,11 +106,6 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         flushNow();
     }
 
-    /**
-     * Gleicht die lokale Tabelle mit dem Supabase-Stand ab.
-     * Override-Zeilen (manuell) bleiben unangetastet; alle anderen Zeilen werden
-     * uebernommen, aktualisiert oder entfernt.
-     */
     public void sync(Map<UUID, PlayerRole> supabaseRoles) {
         if (supabaseRoles == null) return;
 

@@ -8,10 +8,6 @@ package de.jakomi1.project.invsee;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
-/**
- * Name-basierte Item-Kategorien, damit keine Abhängigkeit auf die
- * veralteten Paper-{@code MaterialTags} nötig ist.
- */
 public final class ItemCategories {
 
     private ItemCategories() {

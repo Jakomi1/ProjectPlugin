@@ -8,23 +8,8 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Eine dynamische Rolle.
- *
- * Rollen sind nicht mehr fest als Enum definiert, sondern werden über die
- * {@link RoleRegistry} verwaltet:
- * <ul>
- *   <li><b>BUILTIN</b> – die Standard-Rollen (Mitglied, Supporter, Owner, ...).</li>
- *   <li><b>LOCAL</b> – projekt-spezifische Rollen, per API registriert
- *       (z.B. {@link RoleManager#registerRole}). Werden nie nach Supabase gepusht
- *       und nie durch Supabase-Updates ueberschrieben.</li>
- *   <li><b>SUPABASE</b> – aus der Supabase-Tabelle {@code roles} gezogen
- *       (nur GET, read-only).</li>
- * </ul>
- */
 public final class Role {
 
-    /** Herkunft einer Rollen-Definition. */
     public enum Source {
         BUILTIN,
         LOCAL,
@@ -76,17 +61,14 @@ public final class Role {
         return source;
     }
 
-    /** Die Rolle, von der diese Rolle erbt (Permissions), oder {@code null}. */
     public Role parent() {
         return parentName == null ? null : RoleRegistry.getDefault().role(parentName);
     }
 
-    /** Bukkit-Permission dieser Rolle, z.B. {@code cracked.owner}. */
     public String permission(String prefix) {
         return prefix + "." + name.toLowerCase(Locale.ROOT);
     }
 
-    /** In der Rollen-Definition fest hinterlegte Permissions. */
     public Set<String> permissions() {
         return permissions;
     }
@@ -95,10 +77,6 @@ public final class Role {
         return ComponentUtils.createGradientComponent(display, gradient1, gradient2);
     }
 
-    /**
-     * Alle Permissions dieser Rolle inkl. der geerbten Rollen
-     * (eigene Role-Permission + feste Permissions + Eltern).
-     */
     public Set<String> collectPermissions(String prefix) {
         Set<String> result = new LinkedHashSet<>();
         Role current = this;
@@ -148,28 +126,25 @@ public final class Role {
         return name;
     }
 
-    /** Rolle aus der Standard-Registry nach Namen aufloesen. */
     public static Role role(String name) {
         return RoleRegistry.getDefault().role(name);
     }
 
-    // Standard-Rollen (aufgeloest aus der Standard-Registry).
-    public static final Role MEMBER = RoleRegistry.getDefault().role("MEMBER");
-    public static final Role CONTENT_CREATOR = RoleRegistry.getDefault().role("CONTENT_CREATOR");
-    public static final Role BOOSTER = RoleRegistry.getDefault().role("BOOSTER");
-    public static final Role VIP = RoleRegistry.getDefault().role("VIP");
-    public static final Role DEVELOPER = RoleRegistry.getDefault().role("DEVELOPER");
-    public static final Role BUILDER = RoleRegistry.getDefault().role("BUILDER");
-    public static final Role SUPPORTER = RoleRegistry.getDefault().role("SUPPORTER");
-    public static final Role MODERATOR = RoleRegistry.getDefault().role("MODERATOR");
-    public static final Role ADMIN = RoleRegistry.getDefault().role("ADMIN");
-    public static final Role OWNER = RoleRegistry.getDefault().role("OWNER");
+    public static final Role MEMBER = new Role("MEMBER", "Mitglied", "#219752", "#2ecc71", 0, null, Set.of(), Source.BUILTIN);
+    public static final Role CONTENT_CREATOR = new Role("CONTENT_CREATOR", "Creator", "#aa2a86", "#f27ba4", 1, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role BOOSTER = new Role("BOOSTER", "Booster", "#965f7f", "#ffaadc", 2, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role VIP = new Role("VIP", "VIP", "#beab70", "#fbe7ab", 3, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role DEVELOPER = new Role("DEVELOPER", "Developer", "#4cadd0", "#b2f9ff", 4, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role BUILDER = new Role("BUILDER", "Builder", "#6c45b4", "#5d96ff", 5, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role SUPPORTER = new Role("SUPPORTER", "Supporter", "#2a57e9", "#5B7FEB", 6, "MEMBER", Set.of(), Source.BUILTIN);
+    public static final Role MODERATOR = new Role("MODERATOR", "Moderator", "#c25a00", "#ecb83e", 7, "SUPPORTER", Set.of(), Source.BUILTIN);
+    public static final Role ADMIN = new Role("ADMIN", "Admin", "#700707", "#ff0000", 8, "MODERATOR", Set.of(), Source.BUILTIN);
+    public static final Role OWNER = new Role("OWNER", "Owner", "#c305ff", "#2bd9fd", 9, "ADMIN", Set.of(), Source.BUILTIN);
 
     public static Builder builder(String name) {
         return new Builder(name);
     }
 
-    /** Builder fuer projekt-spezifische Rollen. */
     public static final class Builder {
 
         private final String name;

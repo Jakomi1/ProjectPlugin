@@ -31,13 +31,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static net.kyori.adventure.text.Component.text;
 
-/**
- * Gemeinsames Verhalten einer "Zuschauer"-Session: Der Server-Handling-Teil,
- * der das Inventar eines (ggf. offline) Spielers anzeigt.
- *
- * Offline-Inventare werden über einen temporären {@link ServerPlayer} geladen
- * (Standard-Technik, wie im Original).
- */
 public interface Session {
 
     default void addSubscriber(UUID subscriber) {
@@ -102,9 +95,6 @@ public interface Session {
         return Optional.of(target);
     }
 
-    /**
-     * Das Plugin, unter dem die Session läuft (für Scheduler-Aufrufe).
-     */
     org.bukkit.plugin.Plugin plugin();
 
     UUID getUniqueIdOfObservedPlayer();

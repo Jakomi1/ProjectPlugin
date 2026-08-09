@@ -14,10 +14,6 @@ public class EventListener implements Listener, Registerable {
         this.plugin = plugin;
     }
 
-    /**
-     * Meldet diesen Listener wieder ab (wird beim {@code disable()} von
-     * Managern verwendet).
-     */
     public void unregister() {
         HandlerList.unregisterAll(this);
     }

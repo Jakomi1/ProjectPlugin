@@ -11,14 +11,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-/**
- * Interne NMS-Bridge auf Basis von Reflection.
- *
- * Simuliert Server-Teams (Scoreboard + PlayerTeam) und sendet
- * {@code ClientboundSetPlayerTeamPacket}-Pakete direkt an Spieler, damit
- * Nametag-Präfixe über den Köpfen erscheinen. Baut wie in TheKingdoms auf
- * NMS-Klassen-Namen auf, ohne direkte Referenzen auf die Server-Jar.
- */
 public final class NmsBridge {
 
     private final Logger logger;
@@ -249,11 +241,115 @@ public final class NmsBridge {
             ReflectionUtils.invoke(playerTeamSetPlayerSuffix, team, nmsSuffix);
         }
 
-        ReflectionUtils.invoke(playerTeamSetColor, team, Optional.of(teamColorWhite));
-        ReflectionUtils.invoke(playerTeamSetNameTagVisibility, team, visibilityAlways);
-        ReflectionUtils.invoke(playerTeamSetCollisionRule, team, collisionRuleNever);
-        ReflectionUtils.invoke(playerTeamSetAllowFriendlyFire, team, false);
-        ReflectionUtils.invoke(playerTeamSetSeeFriendlyInvisibles, team, false);
+        setColor(team, teamColorWhite);
+        setNameTagVisibility(team, visibilityAlways);
+        setCollisionRule(team, collisionRuleNever);
+        setAllowFriendlyFire(team, false);
+        setSeeFriendlyInvisibles(team, false);
+    }
+
+    public void setTeamDisplayName(Object team, Component displayName) {
+        if (team == null || !ready) return;
+
+        Object nmsDisplayName = asVanilla(displayName);
+        if (nmsDisplayName != null) {
+            ReflectionUtils.invoke(playerTeamSetDisplayName, team, nmsDisplayName);
+        }
+    }
+
+    public void setTeamPrefix(Object team, Component prefix) {
+        if (team == null || !ready) return;
+
+        Object nmsPrefix = asVanilla(prefix);
+        if (nmsPrefix != null) {
+            ReflectionUtils.invoke(playerTeamSetPlayerPrefix, team, nmsPrefix);
+        }
+    }
+
+    public void setTeamSuffix(Object team, Component suffix) {
+        if (team == null || !ready) return;
+
+        Object nmsSuffix = asVanilla(suffix);
+        if (nmsSuffix != null) {
+            ReflectionUtils.invoke(playerTeamSetPlayerSuffix, team, nmsSuffix);
+        }
+    }
+
+    public void setColor(Object team, Object color) {
+        if (team == null || color == null || !ready) return;
+        ReflectionUtils.invoke(playerTeamSetColor, team, Optional.of(color));
+    }
+
+    public void setNameTagVisibility(Object team, Object visibility) {
+        if (team == null || visibility == null || !ready) return;
+        ReflectionUtils.invoke(playerTeamSetNameTagVisibility, team, visibility);
+    }
+
+    public void setCollisionRule(Object team, Object collisionRule) {
+        if (team == null || collisionRule == null || !ready) return;
+        ReflectionUtils.invoke(playerTeamSetCollisionRule, team, collisionRule);
+    }
+
+    public void setAllowFriendlyFire(Object team, boolean allow) {
+        if (team == null || !ready) return;
+        ReflectionUtils.invoke(playerTeamSetAllowFriendlyFire, team, allow);
+    }
+
+    public void setSeeFriendlyInvisibles(Object team, boolean see) {
+        if (team == null || !ready) return;
+        ReflectionUtils.invoke(playerTeamSetSeeFriendlyInvisibles, team, see);
+    }
+
+    @Nullable
+    public Object color(String name) {
+        return ReflectionUtils.enumConstant(teamColorClass, name);
+    }
+
+    @Nullable
+    public Object visibility(String name) {
+        return ReflectionUtils.enumConstant(visibilityClass, name);
+    }
+
+    @Nullable
+    public Object collisionRule(String name) {
+        return ReflectionUtils.enumConstant(collisionRuleClass, name);
+    }
+
+    public Object colorWhite() {
+        return teamColorWhite;
+    }
+
+    public Object visibilityAlways() {
+        return visibilityAlways;
+    }
+
+    public Object collisionRuleNever() {
+        return collisionRuleNever;
+    }
+
+    public String[] colors() {
+        return enumNames(teamColorClass);
+    }
+
+    public String[] visibilities() {
+        return enumNames(visibilityClass);
+    }
+
+    public String[] collisionRules() {
+        return enumNames(collisionRuleClass);
+    }
+
+    private static String[] enumNames(Class<?> enumClass) {
+        if (enumClass == null || !enumClass.isEnum()) return new String[0];
+
+        Object[] constants = enumClass.getEnumConstants();
+        String[] names = new String[constants.length];
+
+        for (int i = 0; i < constants.length; i++) {
+            names[i] = ((Enum<?>) constants[i]).name();
+        }
+
+        return names;
     }
 
     @Nullable

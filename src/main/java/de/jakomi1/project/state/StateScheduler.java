@@ -28,10 +28,6 @@ public final class StateScheduler {
         return this;
     }
 
-    /**
-     * Startet den Repeating-Task. Pro Sekunde wird geprueft, ob ein geplanter
-     * Uebergang (Uhrzeit/Datum, Europe/Berlin) erreicht wurde.
-     */
     public StateScheduler start() {
         if (task != null && !task.isCancelled()) return this;
         if (schedule.isEmpty()) return this;

@@ -17,13 +17,6 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Einheitliches Command-Interface der Library.
- *
- * Kommandos registrieren sich über {@link Registerable#register(ProjectPlugin)}
- * in der Bukkit-CommandMap (Paper stellt {@link Bukkit#getCommandMap()}
- * bereit, mit Reflection-Fallback für ältere Umgebungen).
- */
 public interface CustomCommand extends CommandExecutor, TabCompleter, Registerable {
 
     String name();
