@@ -133,6 +133,14 @@ public final class WhitelistManager implements AutoManager {
     }
 
     public WhitelistTable table() {
+        return whitelistTable();
+    }
+
+    private WhitelistTable whitelistTable() {
+        if (!tableRegistered) {
+            table.register(server.plugin());
+            tableRegistered = true;
+        }
         return table;
     }
 
@@ -141,47 +149,47 @@ public final class WhitelistManager implements AutoManager {
     }
 
     public boolean isWhitelisted(UUID uuid) {
-        return table.isWhitelisted(uuid);
+        return whitelistTable().isWhitelisted(uuid);
     }
 
     public boolean isWhitelisted(String name) {
-        return table.isWhitelisted(name);
+        return whitelistTable().isWhitelisted(name);
     }
 
     public boolean isWhitelisted(UUID uuid, String name) {
-        return table.isWhitelisted(uuid, name);
+        return whitelistTable().isWhitelisted(uuid, name);
     }
 
     public WhitelistManager add(String name) {
-        table.add(name);
+        whitelistTable().add(name);
         return this;
     }
 
     public WhitelistManager add(UUID uuid) {
-        table.add(uuid);
+        whitelistTable().add(uuid);
         return this;
     }
 
     public WhitelistManager add(UUID uuid, String name) {
-        table.add(uuid, name);
+        whitelistTable().add(uuid, name);
         return this;
     }
 
     public WhitelistManager remove(String name) {
-        table.removeEntry(name);
+        whitelistTable().removeEntry(name);
         return this;
     }
 
     public WhitelistManager remove(UUID uuid) {
-        table.removeEntry(uuid);
+        whitelistTable().removeEntry(uuid);
         return this;
     }
 
     public Collection<WhitelistTable.WhitelistEntry> all() {
-        return table.all();
+        return whitelistTable().all();
     }
 
     public int count() {
-        return table.count();
+        return whitelistTable().count();
     }
 }
