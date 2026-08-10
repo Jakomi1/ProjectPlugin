@@ -1,20 +1,19 @@
 package de.jakomi1.project.pearl;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.scheduler.Scheduler;
 
 import java.util.Set;
 import java.util.UUID;
 
-public final class PearlFixManager implements AutoManager {
+public final class PearlFixManager implements Manager {
 
     private final ProjectServer server;
     private final PearlFixTable table;
     private final PearlFixListener listener;
 
     private boolean enabled;
-    private boolean auto;
     private boolean tableRegistered;
 
     public PearlFixManager(ProjectServer server) {
@@ -45,17 +44,6 @@ public final class PearlFixManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public PearlFixManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public PearlFixManager saveAll() {

@@ -1,6 +1,6 @@
 package de.jakomi1.project.sidebar;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Konflikte mit anderen Plugins entstehen, die das Bukkit-Scoreboard
  * (z.B. für Nametags/Teams) verwenden.
  */
-public final class SidebarManager implements AutoManager {
+public final class SidebarManager implements Manager {
 
     private final ProjectServer server;
     private final SidebarListener listener;
@@ -46,7 +46,6 @@ public final class SidebarManager implements AutoManager {
     private ClientboundSetDisplayObjectivePacket displayPacket;
 
     private boolean enabled;
-    private boolean auto = true;
 
     public SidebarManager(ProjectServer server) {
         this.server = server;
@@ -75,17 +74,6 @@ public final class SidebarManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public SidebarManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public ProjectServer server() {

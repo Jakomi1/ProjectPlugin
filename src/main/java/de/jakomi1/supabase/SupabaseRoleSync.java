@@ -36,7 +36,7 @@ public final class SupabaseRoleSync {
         return this;
     }
 
-    public void enable() {
+    public void activate() {
         if (syncTask != null && !syncTask.isCancelled()) return;
 
         pullDefinitions();

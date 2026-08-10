@@ -61,7 +61,7 @@ public class ProjectServer {
     private final ServerDialogManager dialogManager;
     private final PearlFixManager pearlFixManager;
 
-    private final List<AutoManager> autoManagers;
+    private final List<Manager> autoManagers;
 
     public ProjectServer(ProjectPlugin plugin) {
         this.plugin = plugin;
@@ -242,8 +242,8 @@ public class ProjectServer {
     public void registerEverything() {
         plugin.getRegistry().getRegisterable().forEach(registerable -> registerable.register(plugin));
 
-        for (AutoManager manager : autoManagers) {
-            if (manager.auto()) {
+        for (Manager manager : autoManagers) {
+            if (manager.defaultState()) {
                 manager.enable();
             }
         }

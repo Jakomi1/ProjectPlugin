@@ -1,6 +1,6 @@
 package de.jakomi1.project.whitelist;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.project.connection.ConnectionContext;
 import de.jakomi1.project.connection.ConnectionResult;
@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
-public final class WhitelistManager implements AutoManager {
+public final class WhitelistManager implements Manager {
 
     private static final String CHECK_ID = "whitelist";
 
@@ -31,7 +31,6 @@ public final class WhitelistManager implements AutoManager {
     private final WhitelistCommand command;
 
     private boolean enabled;
-    private boolean auto = true;
     private boolean registerCommand = true;
     private boolean tableRegistered;
     private Role minimumRole = Role.SUPPORTER;
@@ -77,14 +76,8 @@ public final class WhitelistManager implements AutoManager {
     }
 
     @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public WhitelistManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
+    public boolean defaultState() {
+        return false;
     }
 
     public WhitelistManager command(boolean registerCommand) {

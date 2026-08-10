@@ -1,7 +1,7 @@
 package de.jakomi1.dimension;
 
 import de.jakomi1.datapack.ManagedDatapack;
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public final class DimensionManager implements AutoManager {
+public final class DimensionManager implements Manager {
 
     private final ProjectServer server;
     private final Map<String, DimensionDefinition> dimensions = new LinkedHashMap<>();
@@ -26,7 +26,6 @@ public final class DimensionManager implements AutoManager {
     private String packName = "project_dimensions";
     private String description = "Generated dimensions";
     private boolean autoDeploy = true;
-    private boolean auto = true;
 
     private boolean enabled;
 
@@ -54,17 +53,6 @@ public final class DimensionManager implements AutoManager {
     public void disable() {
         if (!enabled) return;
         enabled = false;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public DimensionManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public DimensionManager namespace(String namespace) {

@@ -1,6 +1,6 @@
 package de.jakomi1.project.connection;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import io.papermc.paper.connection.PlayerConfigurationConnection;
 import io.papermc.paper.dialog.Dialog;
@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @SuppressWarnings("UnstableApiUsage")
-public final class ServerDialogManager implements AutoManager {
+public final class ServerDialogManager implements Manager {
 
     private final ProjectServer server;
     private final ServerDialogListener listener;
@@ -41,7 +41,6 @@ public final class ServerDialogManager implements AutoManager {
     private final Map<UUID, PendingDialog> pending = new ConcurrentHashMap<>();
 
     private boolean enabled;
-    private boolean auto = true;
     private boolean termsEnabled;
     private Predicate<ConnectionContext> termsRequired = context -> true;
     private Consumer<ConnectionContext> termsAccepted = context -> {
@@ -72,17 +71,6 @@ public final class ServerDialogManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public ServerDialogManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public ServerDialogManager check(String id, ConnectionCheck check) {

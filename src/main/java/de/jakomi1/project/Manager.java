@@ -8,4 +8,8 @@ public interface Manager {
     }
 
     boolean isEnabled();
+
+    default boolean defaultState() {
+        return true;
+    }
 }

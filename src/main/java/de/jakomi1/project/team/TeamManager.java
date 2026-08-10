@@ -1,6 +1,6 @@
 package de.jakomi1.project.team;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.project.nms.NmsBridge;
 import net.kyori.adventure.text.Component;
@@ -14,7 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-public final class TeamManager implements AutoManager {
+public final class TeamManager implements Manager {
 
     private final ProjectServer server;
     private final NmsBridge bridge;
@@ -23,7 +23,6 @@ public final class TeamManager implements AutoManager {
     private final Map<String, Team> teams = new LinkedHashMap<>();
 
     private boolean enabled;
-    private boolean auto = true;
 
     public TeamManager(ProjectServer server) {
         this.server = server;
@@ -57,17 +56,6 @@ public final class TeamManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public TeamManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public Team team(String name) {

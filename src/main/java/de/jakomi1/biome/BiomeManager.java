@@ -1,7 +1,7 @@
 package de.jakomi1.biome;
 
 import de.jakomi1.datapack.ManagedDatapack;
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public final class BiomeManager implements AutoManager {
+public final class BiomeManager implements Manager {
 
     private final ProjectServer server;
     private final Map<String, BiomeDefinition> biomes = new LinkedHashMap<>();
@@ -23,7 +23,6 @@ public final class BiomeManager implements AutoManager {
     private String dimensionName;
     private String dimensionType = "minecraft:overworld";
     private boolean autoDeploy = true;
-    private boolean auto = true;
 
     private boolean enabled;
 
@@ -51,17 +50,6 @@ public final class BiomeManager implements AutoManager {
     public void disable() {
         if (!enabled) return;
         enabled = false;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public BiomeManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public BiomeManager namespace(String namespace) {

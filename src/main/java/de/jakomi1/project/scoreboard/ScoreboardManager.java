@@ -1,6 +1,6 @@
 package de.jakomi1.project.scoreboard;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket;
@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class ScoreboardManager implements AutoManager {
+public final class ScoreboardManager implements Manager {
 
     private final ProjectServer server;
     private final TabNumberListener listener;
@@ -37,7 +37,6 @@ public final class ScoreboardManager implements AutoManager {
     private ClientboundSetDisplayObjectivePacket displayPacket;
 
     private boolean enabled;
-    private boolean auto = true;
 
     public ScoreboardManager(ProjectServer server) {
         this.server = server;
@@ -78,17 +77,6 @@ public final class ScoreboardManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public ScoreboardManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public ScoreboardManager setTabNumber(Player player, int number) {

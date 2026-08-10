@@ -68,7 +68,7 @@ public final class RoleManager implements Manager {
         Bukkit.getOnlinePlayers().forEach(this::apply);
 
         if (supabaseSync != null) {
-            supabaseSync.enable();
+            supabaseSync.activate();
         }
 
         return this;
@@ -107,7 +107,7 @@ public final class RoleManager implements Manager {
         this.supabaseSync = new SupabaseRoleSync(supabase, this);
 
         if (enabled) {
-            this.supabaseSync.enable();
+            this.supabaseSync.activate();
         }
 
         return this;

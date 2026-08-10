@@ -8,7 +8,7 @@
  */
 package de.jakomi1.project.invsee;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.project.invsee.listener.InvseeListener;
 import de.jakomi1.project.invsee.session.InvseeSessionManager;
@@ -16,7 +16,7 @@ import de.jakomi1.permission.Role;
 
 import java.util.Locale;
 
-public final class InvseeManager implements AutoManager {
+public final class InvseeManager implements Manager {
 
     private final ProjectServer server;
     private final InvseeSessionManager sessionManager;
@@ -24,7 +24,6 @@ public final class InvseeManager implements AutoManager {
     private final InvseeCommand command;
 
     private boolean enabled;
-    private boolean auto = true;
     private boolean registerCommand = true;
     private Role minimumRole = Role.ADMIN;
     private String permission;
@@ -60,17 +59,6 @@ public final class InvseeManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public InvseeManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public InvseeManager command(boolean registerCommand) {

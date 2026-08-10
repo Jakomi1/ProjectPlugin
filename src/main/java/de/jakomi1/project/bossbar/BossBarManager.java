@@ -1,6 +1,6 @@
 package de.jakomi1.project.bossbar;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Pro-Spieler BossBar-Verwaltung auf Basis der Adventure-BossBar-API.
  */
-public final class BossBarManager implements AutoManager {
+public final class BossBarManager implements Manager {
 
     private final ProjectServer server;
     private final BossBarListener listener;
@@ -23,7 +23,6 @@ public final class BossBarManager implements AutoManager {
     private final Map<UUID, BossBar> bossBars = new ConcurrentHashMap<>();
 
     private boolean enabled;
-    private boolean auto = true;
 
     public BossBarManager(ProjectServer server) {
         this.server = server;
@@ -51,17 +50,6 @@ public final class BossBarManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public BossBarManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public ProjectServer server() {

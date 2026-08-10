@@ -1,6 +1,6 @@
 package de.jakomi1.project.link;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 
 import java.util.Collection;
@@ -9,7 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-public final class LinkManager implements AutoManager {
+public final class LinkManager implements Manager {
 
     private static final String DISCORD_COMMAND = "discord";
     private static final String DISCORD_GG = "discord.gg/";
@@ -21,7 +21,6 @@ public final class LinkManager implements AutoManager {
 
     private String discordToken;
     private boolean enabled;
-    private boolean auto = true;
     private boolean registerCommand = true;
     private final Set<String> registered = new java.util.HashSet<>();
 
@@ -57,17 +56,6 @@ public final class LinkManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public LinkManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public LinkManager command(boolean registerCommand) {

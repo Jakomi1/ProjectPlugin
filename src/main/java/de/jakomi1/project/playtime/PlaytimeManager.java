@@ -1,6 +1,6 @@
 package de.jakomi1.project.playtime;
 
-import de.jakomi1.project.AutoManager;
+import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.permission.Role;
 import org.bukkit.Bukkit;
@@ -11,14 +11,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-public final class PlaytimeManager implements AutoManager {
+public final class PlaytimeManager implements Manager {
 
     private final ProjectServer server;
     private final PlaytimeCommand playtimeCommand;
     private final TopTenCommand topTenCommand;
 
     private boolean enabled;
-    private boolean auto = true;
     private boolean registerCommand = true;
     private Role minimumRole = Role.MODERATOR;
 
@@ -49,17 +48,6 @@ public final class PlaytimeManager implements AutoManager {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public boolean auto() {
-        return auto;
-    }
-
-    @Override
-    public PlaytimeManager auto(boolean auto) {
-        this.auto = auto;
-        return this;
     }
 
     public PlaytimeManager command(boolean registerCommand) {
