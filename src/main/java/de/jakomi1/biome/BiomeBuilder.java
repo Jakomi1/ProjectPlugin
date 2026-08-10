@@ -1,5 +1,6 @@
 package de.jakomi1.biome;
 
+import org.bukkit.Registry;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.EntityType;
@@ -179,7 +180,7 @@ public final class BiomeBuilder {
     }
 
     public BiomeBuilder ambientSoundLoop(Sound sound) {
-        return ambientSoundLoop(sound.key().asString());
+        return ambientSoundLoop(soundKey(sound));
     }
 
     public BiomeBuilder ambientSoundAdditions(String sound, double tickChance) {
@@ -189,7 +190,7 @@ public final class BiomeBuilder {
     }
 
     public BiomeBuilder ambientSoundAdditions(Sound sound, double tickChance) {
-        return ambientSoundAdditions(sound.key().asString(), tickChance);
+        return ambientSoundAdditions(soundKey(sound), tickChance);
     }
 
     public BiomeBuilder ambientSoundMood(String sound, int tickDelay, int blockSearchExtent, double offset) {
@@ -201,7 +202,7 @@ public final class BiomeBuilder {
     }
 
     public BiomeBuilder ambientSoundMood(Sound sound, int tickDelay, int blockSearchExtent, double offset) {
-        return ambientSoundMood(sound.key().asString(), tickDelay, blockSearchExtent, offset);
+        return ambientSoundMood(soundKey(sound), tickDelay, blockSearchExtent, offset);
     }
 
     public BiomeBuilder backgroundMusic(String sound, int minDelay, int maxDelay) {
@@ -212,7 +213,11 @@ public final class BiomeBuilder {
     }
 
     public BiomeBuilder backgroundMusic(Sound sound, int minDelay, int maxDelay) {
-        return backgroundMusic(sound.key().asString(), minDelay, maxDelay);
+        return backgroundMusic(soundKey(sound), minDelay, maxDelay);
+    }
+
+    private static String soundKey(Sound sound) {
+        return Registry.SOUNDS.getKey(sound).asString();
     }
 
     public BiomeBuilder ambientParticle(String type, double probability) {
