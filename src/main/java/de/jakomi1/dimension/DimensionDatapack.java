@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 final class DimensionDatapack {
@@ -34,12 +34,8 @@ final class DimensionDatapack {
         this.dimensions = dimensions;
     }
 
-    public void write(File worldFolder) throws IOException {
-        File packRoot = new File(new File(worldFolder, "datapacks"), packName);
-        if (packRoot.exists()) {
-            deleteRecursively(packRoot);
-        }
-        packRoot.mkdirs();
+    public void write(Path packRootPath) throws IOException {
+        File packRoot = packRootPath.toFile();
 
         writeFile(packRoot, "pack.mcmeta", packMcmeta());
 
@@ -276,18 +272,5 @@ final class DimensionDatapack {
         try (FileWriter writer = new FileWriter(file, StandardCharsets.UTF_8)) {
             GSON.toJson(content, writer);
         }
-    }
-
-    private static void deleteRecursively(File file) throws IOException {
-        if (!file.exists()) return;
-        if (file.isDirectory()) {
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteRecursively(child);
-                }
-            }
-        }
-        Files.delete(file.toPath());
     }
 }

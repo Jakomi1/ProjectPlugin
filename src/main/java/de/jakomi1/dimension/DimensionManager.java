@@ -1,5 +1,6 @@
 package de.jakomi1.dimension;
 
+import de.jakomi1.datapack.ManagedDatapack;
 import de.jakomi1.project.AutoManager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
@@ -252,20 +253,27 @@ public final class DimensionManager implements AutoManager {
     public void deploy() {
         World world = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
         if (world == null) {
-            server.plugin().getLogger().warning("DimensionManager: Keine Welt geladen, Datapack konnte nicht geschrieben werden.");
+            server.plugin().getLogger().warning("DimensionManager: Keine Welt geladen, Datapack konnte nicht angewendet werden.");
             return;
         }
 
+        ManagedDatapack.Result result;
         try {
-            new DimensionDatapack(namespace, packName, description,
-                    new ArrayList<>(dimensions.values()))
-                    .write(world.getWorldFolder());
+            DimensionDatapack datapack = new DimensionDatapack(
+                    namespace,
+                    packName,
+                    description,
+                    new ArrayList<>(dimensions.values())
+            );
+
+            result = new ManagedDatapack(server.plugin(), packName)
+                    .update(datapack::write, world.getWorldFolder().toPath());
         } catch (IOException e) {
-            server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht geschrieben werden: " + e.getMessage());
+            server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
             return;
         }
 
-        server.scheduler().runGlobal(() -> applyDatapack());
+        server.scheduler().runGlobal(() -> applyDatapack(result));
     }
 
     public void redeploy() {
@@ -276,7 +284,7 @@ public final class DimensionManager implements AutoManager {
         dimensions.clear();
     }
 
-    private void applyDatapack() {
+    private void applyDatapack(ManagedDatapack.Result result) {
         Plugin plugin = server.plugin();
         try {
             Bukkit.getServer().getDatapackManager().refreshPacks();
@@ -285,9 +293,13 @@ public final class DimensionManager implements AutoManager {
             return;
         }
 
+        boolean needsReload = result.changed();
         try {
             var pack = Bukkit.getServer().getDatapackManager().getPack(packName);
             if (pack != null) {
+                if (!pack.isEnabled()) {
+                    needsReload = true;
+                }
                 pack.setEnabled(true);
             } else {
                 plugin.getLogger().warning("DimensionManager: Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
@@ -296,7 +308,11 @@ public final class DimensionManager implements AutoManager {
             plugin.getLogger().warning("DimensionManager: Datapack '" + packName + "' konnte nicht aktiviert werden: " + t.getMessage());
         }
 
-        Bukkit.reloadData();
-        plugin.getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen angewendet.");
+        if (needsReload) {
+            Bukkit.reloadData();
+            plugin.getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.");
+        } else {
+            plugin.getLogger().info("DimensionManager: Datapack '" + packName + "' ist aktuell.");
+        }
     }
 }

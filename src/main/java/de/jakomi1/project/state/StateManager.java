@@ -16,15 +16,12 @@ public final class StateManager {
     private final ProjectServer server;
     private final GlobalSettingsTable settingsTable;
     private final Map<ServerState, StateSettings> settings = new EnumMap<>(ServerState.class);
-    private final StateJoinListener joinListener;
     private final StateRestrictionListener restrictionListener;
     private final StateScheduler scheduler;
 
     public StateManager(ProjectServer server, GlobalSettingsTable settingsTable) {
         this.server = server;
         this.settingsTable = settingsTable;
-        this.joinListener = new StateJoinListener(this);
-        joinListener.register(server.plugin());
         this.restrictionListener = new StateRestrictionListener(this);
         restrictionListener.register(server.plugin());
         this.scheduler = new StateScheduler(server);
@@ -34,6 +31,9 @@ public final class StateManager {
         }
 
         refresh();
+        server.dialogs().check("state", context -> allowsJoin(context.uniqueId())
+                ? de.jakomi1.project.connection.ConnectionResult.allow()
+                : de.jakomi1.project.connection.ConnectionResult.disconnect(kickMessage()));
     }
 
     public StateManager settings(ServerState state, StateSettings stateSettings) {

@@ -5,6 +5,7 @@ import de.jakomi1.database.table.SkinTable;
 import de.jakomi1.biome.BiomeManager;
 import de.jakomi1.dimension.DimensionManager;
 import de.jakomi1.project.combat.CombatManager;
+import de.jakomi1.project.connection.ServerDialogManager;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.link.LinkManager;
 import de.jakomi1.permission.RoleManager;
@@ -56,6 +57,7 @@ public class ProjectServer {
     private final TeamManager teamManager;
     private final PlaytimeManager playtimeManager;
     private final LinkManager linkManager;
+    private final ServerDialogManager dialogManager;
 
     private final List<AutoManager> autoManagers;
 
@@ -68,6 +70,7 @@ public class ProjectServer {
         this.globalSettings = new GlobalSettingsTable();
         this.globalSettings.register(plugin);
 
+        this.dialogManager = new ServerDialogManager(this);
         this.stateManager = new StateManager(this, globalSettings);
         this.roleManager = new RoleManager(this);
 
@@ -96,6 +99,7 @@ public class ProjectServer {
         this.bossBarManager = new BossBarManager(this);
 
         this.autoManagers = List.of(
+                dialogManager,
                 invseeManager,
                 whitelistManager,
                 scoreboardManager,
@@ -185,6 +189,10 @@ public class ProjectServer {
         return linkManager;
     }
 
+    public ServerDialogManager dialogs() {
+        return dialogManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -241,6 +249,7 @@ public class ProjectServer {
                 regionProtection,
                 invseeManager,
                 roleManager,
+                dialogManager,
                 combatManager,
                 biomeManager,
                 dimensionManager,
