@@ -8,8 +8,6 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -266,14 +264,17 @@ public final class DimensionManager implements AutoManager {
                     new ArrayList<>(dimensions.values())
             );
 
-            result = new ManagedDatapack(server.plugin(), packName)
-                    .update(datapack::write, world.getWorldFolder().toPath());
+            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
+            result = managed.update(datapack::write, world.getWorldFolder().toPath());
+            server.scheduler().runGlobal(() -> managed.apply(
+                    result,
+                    "DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.",
+                    "DimensionManager: Datapack '" + packName + "' ist aktuell."
+            ));
         } catch (IOException e) {
             server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
             return;
         }
-
-        server.scheduler().runGlobal(() -> applyDatapack(result));
     }
 
     public void redeploy() {
@@ -282,37 +283,5 @@ public final class DimensionManager implements AutoManager {
 
     public void clear() {
         dimensions.clear();
-    }
-
-    private void applyDatapack(ManagedDatapack.Result result) {
-        Plugin plugin = server.plugin();
-        try {
-            Bukkit.getServer().getDatapackManager().refreshPacks();
-        } catch (Throwable t) {
-            plugin.getLogger().warning("DimensionManager: DatapackManager nicht verfügbar: " + t.getMessage());
-            return;
-        }
-
-        boolean needsReload = result.changed();
-        try {
-            var pack = Bukkit.getServer().getDatapackManager().getPack(packName);
-            if (pack != null) {
-                if (!pack.isEnabled()) {
-                    needsReload = true;
-                }
-                pack.setEnabled(true);
-            } else {
-                plugin.getLogger().warning("DimensionManager: Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
-            }
-        } catch (Throwable t) {
-            plugin.getLogger().warning("DimensionManager: Datapack '" + packName + "' konnte nicht aktiviert werden: " + t.getMessage());
-        }
-
-        if (needsReload) {
-            Bukkit.reloadData();
-            plugin.getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.");
-        } else {
-            plugin.getLogger().info("DimensionManager: Datapack '" + packName + "' ist aktuell.");
-        }
     }
 }

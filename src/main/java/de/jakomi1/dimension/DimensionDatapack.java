@@ -1,35 +1,31 @@
 package de.jakomi1.dimension;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import de.jakomi1.biome.BiomeDatapackWriter;
 import de.jakomi1.biome.BiomeDefinition;
-import de.jakomi1.util.PackFormat;
+import de.jakomi1.datapack.DatapackMcmeta;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 final class DimensionDatapack {
 
-    private static final Gson GSON = new GsonBuilder()
-            .setPrettyPrinting()
-            .disableHtmlEscaping()
-            .create();
-
     private final String namespace;
-    private final String packName;
     private final String description;
     private final List<DimensionDefinition> dimensions;
 
     DimensionDatapack(String namespace, String packName, String description,
                       List<DimensionDefinition> dimensions) {
         this.namespace = namespace;
-        this.packName = packName;
         this.description = description;
         this.dimensions = dimensions;
     }
@@ -37,44 +33,70 @@ final class DimensionDatapack {
     public void write(Path packRootPath) throws IOException {
         File packRoot = packRootPath.toFile();
 
-        writeFile(packRoot, "pack.mcmeta", packMcmeta());
+        BiomeDatapackWriter.writeFile(packRoot, "pack.mcmeta", DatapackMcmeta.create(description));
+        BiomeDatapackWriter.writeBiomes(packRoot, namespace, embeddedBiomes());
 
         for (DimensionDefinition dimension : dimensions) {
             if (dimension.dimensionType() == null) {
                 File typeFile = new File(packRoot,
                         "data/" + namespace + "/dimension_type/" + dimension.path().replace('.', '/') + ".json");
-                writeFile(typeFile.getParentFile(), typeFile.getName(), dimensionTypeJson(dimension));
+                BiomeDatapackWriter.writeFile(typeFile.getParentFile(), typeFile.getName(), dimensionTypeJson(dimension));
             }
 
             File dimensionFile = new File(packRoot,
                     "data/" + namespace + "/dimension/" + dimension.path().replace('.', '/') + ".json");
-            writeFile(dimensionFile.getParentFile(), dimensionFile.getName(), dimensionJson(dimension));
+            BiomeDatapackWriter.writeFile(dimensionFile.getParentFile(), dimensionFile.getName(), dimensionJson(dimension));
+        }
 
-            for (String tag : dimension.tags()) {
-                writeDimensionTag(packRoot, dimension, tag);
+        for (Map.Entry<String, Set<String>> tag : collectDimensionTags().entrySet()) {
+            String tagNamespace;
+            String tagPath;
+            String tagId = tag.getKey();
+            int colon = tagId.indexOf(':');
+            if (colon > 0) {
+                tagNamespace = tagId.substring(0, colon);
+                tagPath = tagId.substring(colon + 1);
+            } else {
+                tagNamespace = namespace;
+                tagPath = tagId;
             }
+
+            JsonObject root = new JsonObject();
+            root.addProperty("replace", false);
+            JsonArray values = new JsonArray();
+            for (String id : tag.getValue()) {
+                values.add(id);
+            }
+            root.add("values", values);
+
+            File tagFile = new File(packRoot,
+                    "data/" + tagNamespace + "/tags/dimension/" + tagPath.replace('.', '/') + ".json");
+            BiomeDatapackWriter.writeFile(tagFile.getParentFile(), tagFile.getName(), root);
         }
     }
 
-    private JsonObject packMcmeta() {
-        int format = PackFormat.current();
+    private List<BiomeDefinition> embeddedBiomes() {
+        Map<String, BiomeDefinition> biomes = new LinkedHashMap<>();
+        for (DimensionDefinition dimension : dimensions) {
+            if (!DimensionBuilder.SOURCE_MULTI_NOISE.equals(dimension.biomeSourceMode())) {
+                continue;
+            }
+            for (BiomeDefinition biome : dimension.biomes()) {
+                biomes.putIfAbsent(biome.id(), biome);
+            }
+        }
+        return new ArrayList<>(biomes.values());
+    }
 
-        JsonObject pack = new JsonObject();
-        pack.addProperty("description", description);
-
-        JsonArray minFormat = new JsonArray();
-        minFormat.add(format);
-        minFormat.add(1);
-        pack.add("min_format", minFormat);
-
-        JsonArray maxFormat = new JsonArray();
-        maxFormat.add(format);
-        maxFormat.add(1);
-        pack.add("max_format", maxFormat);
-
-        JsonObject root = new JsonObject();
-        root.add("pack", pack);
-        return root;
+    private Map<String, Set<String>> collectDimensionTags() {
+        Map<String, Set<String>> tags = new TreeMap<>();
+        for (DimensionDefinition dimension : dimensions) {
+            for (String tag : dimension.tags()) {
+                String tagId = tag.startsWith("#") ? tag.substring(1) : tag;
+                tags.computeIfAbsent(tagId, k -> new LinkedHashSet<>()).add(dimension.id());
+            }
+        }
+        return tags;
     }
 
     private JsonObject dimensionTypeJson(DimensionDefinition dimension) {
@@ -202,7 +224,7 @@ final class DimensionDatapack {
                 biomeSource.addProperty("type", "minecraft:multi_noise");
                 JsonArray biomesArray = new JsonArray();
                 for (BiomeDefinition biome : dimension.biomes()) {
-                    biomesArray.add(biomeEntry(biome));
+                    biomesArray.add(BiomeDatapackWriter.multiNoiseBiomeEntry(biome));
                 }
                 biomeSource.add("biomes", biomesArray);
             }
@@ -225,52 +247,5 @@ final class DimensionDatapack {
         }
 
         return biomeSource;
-    }
-
-    private JsonObject biomeEntry(BiomeDefinition biome) {
-        JsonObject entry = new JsonObject();
-        entry.addProperty("biome", biome.id());
-
-        JsonObject parameters = new JsonObject();
-        parameters.addProperty("temperature", biome.dimensionTemperature());
-        parameters.addProperty("humidity", biome.dimensionHumidity());
-        parameters.addProperty("continentalness", biome.dimensionContinentalness());
-        parameters.addProperty("erosion", biome.dimensionErosion());
-        parameters.addProperty("depth", biome.dimensionDepth());
-        parameters.addProperty("weirdness", biome.dimensionWeirdness());
-        parameters.addProperty("offset", 0.0F);
-        entry.add("parameters", parameters);
-
-        return entry;
-    }
-
-    private void writeDimensionTag(File packRoot, DimensionDefinition dimension, String tag) throws IOException {
-        String tagNamespace = namespace;
-        String tagPath = tag;
-        int colon = tag.indexOf(':');
-        if (colon > 0) {
-            tagNamespace = tag.substring(0, colon);
-            tagPath = tag.substring(colon + 1);
-        }
-
-        JsonObject root = new JsonObject();
-        root.addProperty("replace", false);
-        JsonArray values = new JsonArray();
-        values.add(dimension.id());
-        root.add("values", values);
-
-        File tagFile = new File(packRoot,
-                "data/" + tagNamespace + "/tags/dimension/" + tagPath.replace('.', '/') + ".json");
-        writeFile(tagFile.getParentFile(), tagFile.getName(), root);
-    }
-
-    private static void writeFile(File parent, String name, JsonObject content) throws IOException {
-        if (parent != null && !parent.exists()) {
-            parent.mkdirs();
-        }
-        File file = new File(parent, name);
-        try (FileWriter writer = new FileWriter(file, StandardCharsets.UTF_8)) {
-            GSON.toJson(content, writer);
-        }
     }
 }

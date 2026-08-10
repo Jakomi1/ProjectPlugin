@@ -5,8 +5,6 @@ import de.jakomi1.project.AutoManager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.plugin.Plugin;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -167,14 +165,17 @@ public final class BiomeManager implements AutoManager {
                     dimensionType
             );
 
-            result = new ManagedDatapack(server.plugin(), packName)
-                    .update(datapack::write, world.getWorldFolder().toPath());
+            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
+            result = managed.update(datapack::write, world.getWorldFolder().toPath());
+            server.scheduler().runGlobal(() -> managed.apply(
+                    result,
+                    "BiomeManager: Datapack '" + packName + "' mit " + biomes.size() + " Biomen aktualisiert.",
+                    "BiomeManager: Datapack '" + packName + "' ist aktuell."
+            ));
         } catch (IOException e) {
             server.plugin().getLogger().warning("BiomeManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
             return;
         }
-
-        server.scheduler().runGlobal(() -> applyDatapack(result));
     }
 
     public void redeploy() {
@@ -183,37 +184,5 @@ public final class BiomeManager implements AutoManager {
 
     public void clear() {
         biomes.clear();
-    }
-
-    private void applyDatapack(ManagedDatapack.Result result) {
-        Plugin plugin = server.plugin();
-        try {
-            Bukkit.getServer().getDatapackManager().refreshPacks();
-        } catch (Throwable t) {
-            plugin.getLogger().warning("BiomeManager: DatapackManager nicht verfügbar: " + t.getMessage());
-            return;
-        }
-
-        boolean needsReload = result.changed();
-        try {
-            var pack = Bukkit.getServer().getDatapackManager().getPack(packName);
-            if (pack != null) {
-                if (!pack.isEnabled()) {
-                    needsReload = true;
-                }
-                pack.setEnabled(true);
-            } else {
-                plugin.getLogger().warning("BiomeManager: Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
-            }
-        } catch (Throwable t) {
-            plugin.getLogger().warning("BiomeManager: Datapack '" + packName + "' konnte nicht aktiviert werden: " + t.getMessage());
-        }
-
-        if (needsReload) {
-            Bukkit.reloadData();
-            plugin.getLogger().info("BiomeManager: Datapack '" + packName + "' mit " + biomes.size() + " Biomen aktualisiert.");
-        } else {
-            plugin.getLogger().info("BiomeManager: Datapack '" + packName + "' ist aktuell.");
-        }
     }
 }

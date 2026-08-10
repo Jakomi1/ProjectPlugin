@@ -1,5 +1,6 @@
 package de.jakomi1.datapack;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
 import java.io.IOException;
@@ -66,6 +67,37 @@ public final class ManagedDatapack {
         return plugin.getDataFolder().toPath()
                 .resolve("datapacks")
                 .resolve(packName);
+    }
+
+    public void apply(Result result, String updatedLogMessage, String currentLogMessage) {
+        try {
+            Bukkit.getServer().getDatapackManager().refreshPacks();
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Datapack '" + packName + "': DatapackManager nicht verfügbar: " + t.getMessage());
+            return;
+        }
+
+        boolean needsReload = result.changed();
+        try {
+            var pack = Bukkit.getServer().getDatapackManager().getPack(packName);
+            if (pack != null) {
+                if (!pack.isEnabled()) {
+                    needsReload = true;
+                }
+                pack.setEnabled(true);
+            } else {
+                plugin.getLogger().warning("Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
+            }
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Datapack '" + packName + "' konnte nicht aktiviert werden: " + t.getMessage());
+        }
+
+        if (needsReload) {
+            Bukkit.reloadData();
+            plugin.getLogger().info(updatedLogMessage);
+        } else {
+            plugin.getLogger().info(currentLogMessage);
+        }
     }
 
     private boolean syncWorldCopy(Path pluginCopy, Path worldCopy, String hash) throws IOException {
