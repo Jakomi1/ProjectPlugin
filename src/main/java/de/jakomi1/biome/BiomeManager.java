@@ -14,6 +14,8 @@ import java.util.function.Consumer;
 
 public final class BiomeManager implements Manager {
 
+    private static final long DEPLOY_DELAY_TICKS = 200L;
+
     private final ProjectServer server;
     private final Map<String, BiomeDefinition> biomes = new LinkedHashMap<>();
 
@@ -36,7 +38,7 @@ public final class BiomeManager implements Manager {
         enabled = true;
 
         if (autoDeploy && !biomes.isEmpty()) {
-            deploy();
+            server.scheduler().runLater(this::deploy, DEPLOY_DELAY_TICKS);
         }
         return this;
     }
@@ -152,7 +154,9 @@ public final class BiomeManager implements Manager {
                     dimensionType
             );
 
-            new ManagedDatapack(packName).update(datapack::write, world.getWorldFolder().toPath());
+            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
+            managed.update(datapack::write, world.getWorldFolder().toPath());
+            managed.load();
             server.plugin().getLogger().info("BiomeManager: Datapack '" + packName + "' mit " + biomes.size() + " Biomen aktualisiert.");
         } catch (IOException e) {
             server.plugin().getLogger().warning("BiomeManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());

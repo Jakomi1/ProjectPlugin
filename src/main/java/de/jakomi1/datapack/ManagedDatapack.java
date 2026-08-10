@@ -1,5 +1,10 @@
 package de.jakomi1.datapack;
 
+import io.papermc.paper.datapack.Datapack;
+import io.papermc.paper.datapack.DatapackManager;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
+
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileVisitResult;
@@ -11,9 +16,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 public final class ManagedDatapack {
 
+    private final Plugin plugin;
     private final String packName;
 
-    public ManagedDatapack(String packName) {
+    public ManagedDatapack(Plugin plugin, String packName) {
+        this.plugin = plugin;
         this.packName = packName;
     }
 
@@ -34,6 +41,35 @@ public final class ManagedDatapack {
 
         replaceDirectory(target, staging);
         return target;
+    }
+
+    public void load() {
+        try {
+            DatapackManager manager = Bukkit.getServer().getDatapackManager();
+            manager.refreshPacks();
+
+            Datapack pack = manager.getPack("file/" + packName);
+            if (pack == null) {
+                for (Datapack candidate : manager.getPacks()) {
+                    if (candidate.getName().equals(packName) || candidate.getName().equals("file/" + packName)) {
+                        pack = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (pack == null) {
+                plugin.getLogger().warning("Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
+                return;
+            }
+
+            if (!pack.isEnabled()) {
+                pack.setEnabled(true);
+                plugin.getLogger().info("Datapack '" + packName + "' wurde geladen.");
+            }
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Datapack '" + packName + "' konnte nicht geladen werden: " + t.getMessage());
+        }
     }
 
     private static void replaceDirectory(Path target, Path source) throws IOException {

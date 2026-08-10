@@ -251,7 +251,7 @@ public final class DimensionManager implements Manager {
                     new ArrayList<>(dimensions.values())
             );
 
-            new ManagedDatapack(packName).update(datapack::write, world.getWorldFolder().toPath());
+            new ManagedDatapack(server.plugin(), packName).update(datapack::write, world.getWorldFolder().toPath());
             server.plugin().getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.");
         } catch (IOException e) {
             server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
