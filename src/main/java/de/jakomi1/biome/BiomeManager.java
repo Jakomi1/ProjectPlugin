@@ -142,7 +142,6 @@ public final class BiomeManager implements Manager {
             return;
         }
 
-        ManagedDatapack.Result result;
         try {
             BiomeDatapack datapack = new BiomeDatapack(
                     namespace,
@@ -153,16 +152,10 @@ public final class BiomeManager implements Manager {
                     dimensionType
             );
 
-            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
-            result = managed.update(datapack::write, world.getWorldFolder().toPath());
-            server.scheduler().runGlobal(() -> managed.apply(
-                    result,
-                    "BiomeManager: Datapack '" + packName + "' mit " + biomes.size() + " Biomen aktualisiert.",
-                    "BiomeManager: Datapack '" + packName + "' ist aktuell."
-            ));
+            new ManagedDatapack(packName).update(datapack::write, world.getWorldFolder().toPath());
+            server.plugin().getLogger().info("BiomeManager: Datapack '" + packName + "' mit " + biomes.size() + " Biomen aktualisiert.");
         } catch (IOException e) {
             server.plugin().getLogger().warning("BiomeManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
-            return;
         }
     }
 

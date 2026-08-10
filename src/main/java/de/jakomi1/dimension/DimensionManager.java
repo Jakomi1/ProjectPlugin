@@ -243,7 +243,6 @@ public final class DimensionManager implements Manager {
             return;
         }
 
-        ManagedDatapack.Result result;
         try {
             DimensionDatapack datapack = new DimensionDatapack(
                     namespace,
@@ -252,16 +251,10 @@ public final class DimensionManager implements Manager {
                     new ArrayList<>(dimensions.values())
             );
 
-            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
-            result = managed.update(datapack::write, world.getWorldFolder().toPath());
-            server.scheduler().runGlobal(() -> managed.apply(
-                    result,
-                    "DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.",
-                    "DimensionManager: Datapack '" + packName + "' ist aktuell."
-            ));
+            new ManagedDatapack(packName).update(datapack::write, world.getWorldFolder().toPath());
+            server.plugin().getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.");
         } catch (IOException e) {
             server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
-            return;
         }
     }
 
