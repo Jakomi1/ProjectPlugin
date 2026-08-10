@@ -62,7 +62,7 @@ public final class ManagedDatapack {
             deleteRecursively(staging);
         }
 
-        Path worldCopy = worldFolder.resolve("datapacks").resolve(packName);
+        Path worldCopy = worldRoot(worldFolder).resolve("datapacks").resolve(packName);
         boolean worldUpdated = syncWorldCopy(pluginCopy, worldCopy, hash);
 
         return new Result(pluginCopy, worldCopy, hash, pluginUpdated, worldUpdated);
@@ -160,12 +160,12 @@ public final class ManagedDatapack {
 
             if (result instanceof CompletableFuture<?> future) {
                 future.exceptionally(throwable -> {
-                    plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + throwable.getMessage());
+                    plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + describe(throwable));
                     return null;
                 });
             }
         } catch (Throwable t) {
-            plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + t.getMessage());
+            plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + describe(t));
         }
     }
 
@@ -200,6 +200,21 @@ public final class ManagedDatapack {
 
     private static Object invokeMethod(Object target, String name) throws Exception {
         return target.getClass().getMethod(name).invoke(target);
+    }
+
+    private static String describe(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null
+                && (current instanceof java.lang.reflect.InvocationTargetException
+                || current instanceof java.util.concurrent.CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)) {
+            current = current.getCause();
+        }
+        if (current == null) {
+            current = throwable;
+        }
+        String message = current.getMessage();
+        return current.getClass().getSimpleName() + (message == null ? "" : ": " + message);
     }
 
     private boolean syncWorldCopy(Path pluginCopy, Path worldCopy, String hash) throws IOException {
@@ -313,6 +328,17 @@ public final class ManagedDatapack {
 
     private static Path sibling(Path path, String suffix) {
         return path.resolveSibling(path.getFileName() + suffix);
+    }
+
+    private static Path worldRoot(Path folder) {
+        Path current = folder.toAbsolutePath().normalize();
+        while (current != null) {
+            if (Files.isRegularFile(current.resolve("level.dat"))) {
+                return current;
+            }
+            current = current.getParent();
+        }
+        return folder;
     }
 
     private static void deleteRecursively(Path path) throws IOException {
