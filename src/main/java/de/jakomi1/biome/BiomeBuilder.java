@@ -1,5 +1,7 @@
 package de.jakomi1.biome;
 
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.entity.EntityType;
 
 import java.util.ArrayList;
@@ -97,6 +99,11 @@ public final class BiomeBuilder {
         return this;
     }
 
+    public BiomeBuilder waterColor(WaterColor color) {
+        this.waterColor = color.hex();
+        return this;
+    }
+
     public BiomeBuilder waterFogColor(int rgb) {
         this.waterFogColor = toHex(rgb);
         return this;
@@ -154,7 +161,7 @@ public final class BiomeBuilder {
     }
 
     public BiomeBuilder spawn(SpawnCategory category, EntityType type, int weight, int minCount, int maxCount) {
-        return spawn(category, type.getKey().asString(), weight, minCount, maxCount);
+        return spawn(category, type.key().asString(), weight, minCount, maxCount);
     }
 
     public BiomeBuilder tag(String tag) {
@@ -162,15 +169,27 @@ public final class BiomeBuilder {
         return this;
     }
 
+    public BiomeBuilder tag(BiomeTags tag) {
+        return tag("minecraft:" + tag.key());
+    }
+
     public BiomeBuilder ambientSoundLoop(String sound) {
         this.ambientSoundLoop = sound;
         return this;
+    }
+
+    public BiomeBuilder ambientSoundLoop(Sound sound) {
+        return ambientSoundLoop(sound.key().asString());
     }
 
     public BiomeBuilder ambientSoundAdditions(String sound, double tickChance) {
         this.ambientSoundAdditions = sound;
         this.ambientSoundAdditionsChance = tickChance;
         return this;
+    }
+
+    public BiomeBuilder ambientSoundAdditions(Sound sound, double tickChance) {
+        return ambientSoundAdditions(sound.key().asString(), tickChance);
     }
 
     public BiomeBuilder ambientSoundMood(String sound, int tickDelay, int blockSearchExtent, double offset) {
@@ -181,6 +200,10 @@ public final class BiomeBuilder {
         return this;
     }
 
+    public BiomeBuilder ambientSoundMood(Sound sound, int tickDelay, int blockSearchExtent, double offset) {
+        return ambientSoundMood(sound.key().asString(), tickDelay, blockSearchExtent, offset);
+    }
+
     public BiomeBuilder backgroundMusic(String sound, int minDelay, int maxDelay) {
         this.backgroundMusic = sound;
         this.backgroundMusicMinDelay = minDelay;
@@ -188,9 +211,17 @@ public final class BiomeBuilder {
         return this;
     }
 
+    public BiomeBuilder backgroundMusic(Sound sound, int minDelay, int maxDelay) {
+        return backgroundMusic(sound.key().asString(), minDelay, maxDelay);
+    }
+
     public BiomeBuilder ambientParticle(String type, double probability) {
         this.ambientParticles.add(new ParticleEntry(type, probability));
         return this;
+    }
+
+    public BiomeBuilder ambientParticle(Particle particle, double probability) {
+        return ambientParticle(particle.key().asString(), probability);
     }
 
     public BiomeBuilder increasedFireBurnout(boolean increasedFireBurnout) {

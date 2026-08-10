@@ -35,7 +35,7 @@ public final class Commands {
 
     public static boolean requirePermission(@NotNull CommandSender sender, @Nullable String permission) {
         return requirePermission(sender, permission, Component.text(
-                "Du hast keine Berechtigung für diesen Befehl.",
+                "Dazu hast du keine Berechtigung!",
                 NamedTextColor.RED
         ));
     }

@@ -6,13 +6,18 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
+import java.io.InputStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class ManagedDatapack {
 
@@ -39,7 +44,8 @@ public final class ManagedDatapack {
         Files.createDirectories(staging);
         writer.write(staging);
 
-        replaceDirectory(target, staging);
+        syncDirectory(target, staging);
+        deleteRecursively(staging);
         return target;
     }
 
@@ -72,34 +78,87 @@ public final class ManagedDatapack {
         }
     }
 
-    private static void replaceDirectory(Path target, Path source) throws IOException {
-        Files.createDirectories(target.getParent());
+    private void syncDirectory(Path target, Path source) throws IOException {
+        Files.createDirectories(target);
 
-        Path backup = sibling(target, ".old");
-        deleteRecursively(backup);
+        Set<Path> expected = new HashSet<>();
 
-        if (Files.exists(target)) {
-            move(target, backup);
-        }
+        try (var stream = Files.walk(source)) {
+            for (Path path : (Iterable<Path>) stream::iterator) {
+                if (!Files.isRegularFile(path)) continue;
 
-        try {
-            move(source, target);
-        } catch (IOException e) {
-            if (Files.exists(backup) && !Files.exists(target)) {
-                move(backup, target);
+                Path relative = source.relativize(path);
+                expected.add(relative);
+                Path destination = target.resolve(relative);
+
+                if (sameContent(path, destination)) {
+                    continue;
+                }
+
+                Files.createDirectories(destination.getParent());
+                try {
+                    Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
+                    plugin.getLogger().info("Datapack '" + packName + "': " + pathName(relative) + " aktualisiert.");
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht aktualisiert werden: " + e.getMessage());
+                }
             }
-            throw e;
         }
 
-        deleteRecursively(backup);
+        try (var stream = Files.walk(target)) {
+            for (Path path : (Iterable<Path>) stream::iterator) {
+                if (!Files.isRegularFile(path)) continue;
+
+                Path relative = target.relativize(path);
+                if (expected.contains(relative)) continue;
+
+                try {
+                    Files.deleteIfExists(path);
+                    plugin.getLogger().info("Datapack '" + packName + "': " + pathName(relative) + " entfernt.");
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht entfernt werden: " + e.getMessage());
+                }
+            }
+        }
+
+        try (var stream = Files.walk(target)) {
+            List<Path> directories = stream.filter(Files::isDirectory)
+                    .sorted(Comparator.reverseOrder())
+                    .toList();
+            for (Path directory : directories) {
+                if (directory.equals(target)) continue;
+                try (var entries = Files.list(directory)) {
+                    if (!entries.findFirst().isPresent()) {
+                        try {
+                            Files.deleteIfExists(directory);
+                        } catch (IOException ignored) {
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    private static void move(Path source, Path target) throws IOException {
-        try {
-            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (AtomicMoveNotSupportedException ignored) {
-            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+    private static boolean sameContent(Path source, Path target) throws IOException {
+        if (!Files.isRegularFile(target)) return false;
+        if (Files.size(source) != Files.size(target)) return false;
+
+        try (InputStream inSource = Files.newInputStream(source);
+             InputStream inTarget = Files.newInputStream(target)) {
+            byte[] sourceBuffer = new byte[8192];
+            byte[] targetBuffer = new byte[8192];
+            while (true) {
+                int sourceRead = inSource.read(sourceBuffer);
+                int targetRead = inTarget.read(targetBuffer);
+                if (sourceRead != targetRead) return false;
+                if (sourceRead < 0) return true;
+                if (!Arrays.equals(sourceBuffer, 0, sourceRead, targetBuffer, 0, targetRead)) return false;
+            }
         }
+    }
+
+    private static String pathName(Path relative) {
+        return relative.toString().replace('\\', '/');
     }
 
     private static Path worldRoot(Path folder) {

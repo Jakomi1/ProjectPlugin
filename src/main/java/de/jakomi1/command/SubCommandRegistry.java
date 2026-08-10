@@ -19,7 +19,7 @@ public final class SubCommandRegistry {
     private final Map<String, SubCommand> subCommands = new LinkedHashMap<>();
 
     private Component missingPermissionMessage = Component.text(
-            "Du hast keine Berechtigung für diesen Befehl.",
+            "Dazu hast du keine Berechtigung!",
             NamedTextColor.RED
     );
     private Component helpTitle = Component.text("Befehle:", NamedTextColor.GOLD);
