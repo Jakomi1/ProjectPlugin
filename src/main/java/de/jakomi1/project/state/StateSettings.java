@@ -32,7 +32,7 @@ public final class StateSettings {
             case STOPPED -> builder()
                     .join(StateRule.none())
                     .hidePlayers(true)
-                    .border(BorderSettings.of(100, 0, 0))
+                    .border(BorderSettings.of(100))
                     .subMotd(Component.text("Der Server ist derzeit gestoppt.", NamedTextColor.RED))
                     .kickMessage(Component.text("Der Server ist derzeit gestoppt.", NamedTextColor.RED))
                     .build();
@@ -40,20 +40,20 @@ public final class StateSettings {
             case STARTED -> builder()
                     .join(StateRule.all())
                     .hidePlayers(false)
-                    .border(BorderSettings.of(500, 0, 0))
+                    .border(BorderSettings.of(500))
                     .subMotd(Component.text("Der Server startet gleich...", NamedTextColor.GREEN))
                     .build();
 
             case OPEN -> builder()
                     .join(StateRule.all())
                     .hidePlayers(false)
-                    .border(BorderSettings.of(8000, 0, 0))
+                    .border(BorderSettings.of(8000))
                     .build();
 
             case CLOSED -> builder()
                     .join(StateRule.none())
                     .hidePlayers(true)
-                    .border(BorderSettings.of(1000, 0, 0))
+                    .border(BorderSettings.of(1000))
                     .subMotd(Component.text("Der Server ist geschlossen.", NamedTextColor.RED))
                     .kickMessage(Component.text("Der Server ist geschlossen.", NamedTextColor.RED))
                     .build();

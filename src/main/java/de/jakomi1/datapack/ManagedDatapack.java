@@ -1,10 +1,13 @@
 package de.jakomi1.datapack;
 
+import io.papermc.paper.datapack.Datapack;
+import io.papermc.paper.datapack.DatapackManager;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileVisitResult;
@@ -16,9 +19,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public final class ManagedDatapack {
 
@@ -70,34 +75,131 @@ public final class ManagedDatapack {
     }
 
     public void apply(Result result, String updatedLogMessage, String currentLogMessage) {
+        DatapackManager manager;
         try {
-            Bukkit.getServer().getDatapackManager().refreshPacks();
+            manager = Bukkit.getServer().getDatapackManager();
+            manager.refreshPacks();
         } catch (Throwable t) {
             plugin.getLogger().warning("Datapack '" + packName + "': DatapackManager nicht verfügbar: " + t.getMessage());
             return;
         }
 
         boolean needsReload = result.changed();
+        boolean reloadAlreadyScheduled = false;
+
         try {
-            var pack = Bukkit.getServer().getDatapackManager().getPack(packName);
+            Datapack pack = findPack(manager);
             if (pack != null) {
-                if (!pack.isEnabled()) {
+                boolean wasEnabled = pack.isEnabled();
+                if (!wasEnabled) {
                     needsReload = true;
                 }
+                // setEnabled löst selbst einen Ressourcen-Reload aus, wenn sich der Zustand ändert.
                 pack.setEnabled(true);
+                reloadAlreadyScheduled = !wasEnabled;
             } else {
                 plugin.getLogger().warning("Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
+                needsReload = true;
             }
         } catch (Throwable t) {
             plugin.getLogger().warning("Datapack '" + packName + "' konnte nicht aktiviert werden: " + t.getMessage());
+            needsReload = true;
         }
 
         if (needsReload) {
-            Bukkit.reloadData();
+            if (!reloadAlreadyScheduled) {
+                reloadResources();
+            }
             plugin.getLogger().info(updatedLogMessage);
         } else {
             plugin.getLogger().info(currentLogMessage);
         }
+    }
+
+    private Datapack findPack(DatapackManager manager) {
+        String prefixed = "file/" + packName;
+
+        Datapack pack = manager.getPack(packName);
+        if (pack != null) {
+            return pack;
+        }
+
+        pack = manager.getPack(prefixed);
+        if (pack != null) {
+            return pack;
+        }
+
+        for (Datapack candidate : manager.getPacks()) {
+            String name = candidate.getName();
+            if (name.equals(packName) || name.equals(prefixed)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private void reloadResources() {
+        try {
+            Object server = minecraftServer();
+            Method method = reloadResourcesMethod(server.getClass());
+            if (method == null) {
+                plugin.getLogger().warning("Datapack '" + packName + "': MinecraftServer.reloadResources nicht gefunden, Reload übersprungen.");
+                return;
+            }
+
+            Object repository = invokeMethod(server, "getPackRepository");
+            Collection<?> selected = (Collection<?>) invokeMethod(repository, "getSelectedIds");
+
+            Object result;
+            if (method.getParameterCount() == 2) {
+                result = method.invoke(server, selected, pluginCause());
+            } else {
+                result = method.invoke(server, selected);
+            }
+
+            if (result instanceof CompletableFuture<?> future) {
+                future.exceptionally(throwable -> {
+                    plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + throwable.getMessage());
+                    return null;
+                });
+            }
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Datapack '" + packName + "': Reload fehlgeschlagen: " + t.getMessage());
+        }
+    }
+
+    private static Object minecraftServer() throws Exception {
+        return Bukkit.getServer().getClass().getMethod("getServer").invoke(Bukkit.getServer());
+    }
+
+    private static Method reloadResourcesMethod(Class<?> serverClass) {
+        Method fallback = null;
+
+        for (Method method : serverClass.getMethods()) {
+            if (!method.getName().equals("reloadResources")) {
+                continue;
+            }
+
+            Class<?>[] parameters = method.getParameterTypes();
+            if (parameters.length == 1 && Collection.class.isAssignableFrom(parameters[0])) {
+                fallback = method;
+            }
+            if (parameters.length == 2 && Collection.class.isAssignableFrom(parameters[0])) {
+                return method;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static Object pluginCause() throws Exception {
+        Class<?> causeClass = Class.forName("io.papermc.paper.event.server.ServerResourcesReloadedEvent$Cause");
+        return causeClass.getMethod("valueOf", String.class).invoke(null, "PLUGIN");
+    }
+
+    private static Object invokeMethod(Object target, String name) throws Exception {
+        return target.getClass().getMethod(name).invoke(target);
     }
 
     private boolean syncWorldCopy(Path pluginCopy, Path worldCopy, String hash) throws IOException {

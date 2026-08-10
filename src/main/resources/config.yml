@@ -1,5 +1,0 @@
-# Konfiguration
-#
-# Hinweis: Die Supabase-Verbindungsdaten sind fest im Code hinterlegt
-# (de.jakomi1.supabase.Supabase: BASE_URL und API_KEY) und werden nicht
-# über die config.yml überschrieben.

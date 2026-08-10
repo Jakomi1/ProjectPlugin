@@ -1,6 +1,7 @@
 plugins {
     id("java-library")
     id("maven-publish")
+    id("com.gradleup.shadow") version "9.5.1"
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.21"
 }
 
@@ -19,10 +20,30 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
+tasks {
+    jar {
+        enabled = false
+    }
+
+    shadowJar {
+        archiveBaseName.set("ProjectPlugin")
+        archiveVersion.set("")
+        archiveClassifier.set("")
+    }
+
+    build {
+        dependsOn(shadowJar)
+    }
+
+    clean {
+        delete(layout.buildDirectory.dir("libs"))
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            from(components["java"])
+            artifact(tasks.shadowJar)
         }
     }
 }

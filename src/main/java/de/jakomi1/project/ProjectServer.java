@@ -8,6 +8,7 @@ import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.connection.ServerDialogManager;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.link.LinkManager;
+import de.jakomi1.project.pearl.PearlFixManager;
 import de.jakomi1.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
 import de.jakomi1.project.playtime.PlaytimeManager;
@@ -58,6 +59,7 @@ public class ProjectServer {
     private final PlaytimeManager playtimeManager;
     private final LinkManager linkManager;
     private final ServerDialogManager dialogManager;
+    private final PearlFixManager pearlFixManager;
 
     private final List<AutoManager> autoManagers;
 
@@ -97,6 +99,7 @@ public class ProjectServer {
         this.linkManager = new LinkManager(this);
         this.sidebarManager = new SidebarManager(this);
         this.bossBarManager = new BossBarManager(this);
+        this.pearlFixManager = new PearlFixManager(this);
 
         this.autoManagers = List.of(
                 dialogManager,
@@ -109,7 +112,8 @@ public class ProjectServer {
                 playtimeManager,
                 linkManager,
                 sidebarManager,
-                bossBarManager
+                bossBarManager,
+                pearlFixManager
         );
     }
 
@@ -193,6 +197,10 @@ public class ProjectServer {
         return dialogManager;
     }
 
+    public PearlFixManager pearls() {
+        return pearlFixManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -259,7 +267,8 @@ public class ProjectServer {
                 playtimeManager,
                 linkManager,
                 sidebarManager,
-                bossBarManager
+                bossBarManager,
+                pearlFixManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();
