@@ -25,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +39,6 @@ public final class ServerDialogManager implements Manager {
     private final ServerDialogListener listener;
     private final Map<String, ConnectionCheck> checks = new LinkedHashMap<>();
     private final Map<UUID, PendingDialog> pending = new ConcurrentHashMap<>();
-    private final Set<UUID> acceptedTerms = ConcurrentHashMap.newKeySet();
 
     private boolean enabled;
     private boolean termsEnabled;
@@ -68,7 +66,6 @@ public final class ServerDialogManager implements Manager {
         enabled = false;
         listener.unregister();
         pending.clear();
-        acceptedTerms.clear();
     }
 
     @Override
@@ -135,11 +132,10 @@ public final class ServerDialogManager implements Manager {
             if (!handleResult(context, result)) return;
         }
 
-        if (termsEnabled && !acceptedTerms.contains(uniqueId) && termsRequired.test(context)) {
+        if (termsEnabled && termsRequired.test(context)) {
             boolean accepted = showAndAwait(context, createTermsDialog());
             if (!accepted) return;
 
-            acceptedTerms.add(uniqueId);
             termsAccepted.accept(context);
         }
     }

@@ -11,8 +11,15 @@ import java.util.UUID;
  */
 public final class TermsTable extends KeyValueTable<UUID, String> {
 
+    private static TermsTable instance;
+
     public TermsTable() {
         super("terms_acceptance", UUID.class, String.class, "player_uuid", "player_name");
+        instance = this;
+    }
+
+    public static TermsTable get() {
+        return instance;
     }
 
     public boolean hasAccepted(UUID uniqueId) {
@@ -30,6 +37,13 @@ public final class TermsTable extends KeyValueTable<UUID, String> {
         if (uniqueId == null) return;
 
         remove(uniqueId);
+        flushNow();
+    }
+
+    public void clearAll() {
+        for (UUID uniqueId : keys()) {
+            remove(uniqueId);
+        }
         flushNow();
     }
 
