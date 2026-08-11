@@ -170,8 +170,8 @@ public final class BiomeBuilder {
         return this;
     }
 
-    public BiomeBuilder tag(BiomeTags tag) {
-        return tag("minecraft:" + tag.key());
+    public BiomeBuilder tag(io.papermc.paper.registry.tag.TagKey<org.bukkit.block.Biome> tag) {
+        return tag(tag.key().asString());
     }
 
     public BiomeBuilder ambientSoundLoop(String sound) {
