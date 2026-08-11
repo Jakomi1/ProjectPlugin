@@ -32,6 +32,7 @@ public final class NametagManager implements Manager {
     private Function<Player, String> teamResolver = player -> null;
     private Function<Player, Component> prefixResolver = player -> Component.empty();
     private Function<Player, Component> suffixResolver = player -> Component.empty();
+    private Function<Player, String> colorResolver = player -> null;
 
     private final Map<UUID, Map<String, KnownTeam>> known = new HashMap<>();
     private Scheduler.Task timer;
@@ -53,6 +54,11 @@ public final class NametagManager implements Manager {
 
     public NametagManager suffix(Function<Player, Component> resolver) {
         this.suffixResolver = resolver == null ? player -> Component.empty() : resolver;
+        return this;
+    }
+
+    public NametagManager color(Function<Player, String> resolver) {
+        this.colorResolver = resolver == null ? player -> null : resolver;
         return this;
     }
 
@@ -119,7 +125,12 @@ public final class NametagManager implements Manager {
 
             DesiredTeam team = desired.computeIfAbsent(
                     teamName,
-                    name -> new DesiredTeam(name, prefixResolver.apply(player), suffixResolver.apply(player))
+                    name -> new DesiredTeam(
+                            name,
+                            prefixResolver.apply(player),
+                            suffixResolver.apply(player),
+                            resolveColor(player)
+                    )
             );
             team.members.add(player.getName());
         }
@@ -146,6 +157,10 @@ public final class NametagManager implements Manager {
 
                     bridge.configureTeam(team, desiredTeam.prefix, desiredTeam.suffix);
 
+                    if (desiredTeam.color != null) {
+                        bridge.setColor(team, desiredTeam.color);
+                    }
+
                     for (String member : desiredTeam.members) {
                         bridge.addPlayerToTeam(scoreboard, team, member);
                     }
@@ -154,7 +169,8 @@ public final class NametagManager implements Manager {
                             desiredTeam.name,
                             team,
                             desiredTeam.prefix,
-                            desiredTeam.suffix
+                            desiredTeam.suffix,
+                            desiredTeam.color
                     );
                     current.members.addAll(desiredTeam.members);
                     viewerKnown.put(desiredTeam.name, current);
@@ -162,12 +178,19 @@ public final class NametagManager implements Manager {
                     send(viewer, bridge.addOrModifyPacket(team, true));
                 } else {
                     boolean styleChanged = !desiredTeam.prefix.equals(current.prefix)
-                            || !desiredTeam.suffix.equals(current.suffix);
+                            || !desiredTeam.suffix.equals(current.suffix)
+                            || desiredTeam.color != current.color;
 
                     if (styleChanged) {
                         bridge.configureTeam(current.team, desiredTeam.prefix, desiredTeam.suffix);
+                        if (desiredTeam.color != null) {
+                            bridge.setColor(current.team, desiredTeam.color);
+                        } else {
+                            bridge.setColor(current.team, bridge.colorWhite());
+                        }
                         current.prefix = desiredTeam.prefix;
                         current.suffix = desiredTeam.suffix;
+                        current.color = desiredTeam.color;
                         send(viewer, bridge.addOrModifyPacket(current.team, false));
                     }
 
@@ -202,6 +225,13 @@ public final class NametagManager implements Manager {
         }
     }
 
+    private Object resolveColor(Player player) {
+        String name = colorResolver.apply(player);
+        if (name == null || name.isBlank()) return null;
+
+        return bridge.color(name);
+    }
+
     private void send(Player viewer, Object packet) {
         if (packet == null) return;
 
@@ -220,12 +250,14 @@ public final class NametagManager implements Manager {
         private final Set<String> members = new HashSet<>();
         private Component prefix;
         private Component suffix;
+        private Object color;
 
-        private KnownTeam(String name, Object team, Component prefix, Component suffix) {
+        private KnownTeam(String name, Object team, Component prefix, Component suffix, Object color) {
             this.name = name;
             this.team = team;
             this.prefix = prefix;
             this.suffix = suffix;
+            this.color = color;
         }
     }
 
@@ -233,12 +265,14 @@ public final class NametagManager implements Manager {
         private final String name;
         private final Component prefix;
         private final Component suffix;
+        private final Object color;
         private final Set<String> members = new HashSet<>();
 
-        private DesiredTeam(String name, Component prefix, Component suffix) {
+        private DesiredTeam(String name, Component prefix, Component suffix, Object color) {
             this.name = name;
             this.prefix = prefix;
             this.suffix = suffix;
+            this.color = color;
         }
     }
 }
