@@ -33,6 +33,7 @@ public final class NametagManager implements Manager {
     private Function<Player, Component> prefixResolver = player -> Component.empty();
     private Function<Player, Component> suffixResolver = player -> Component.empty();
     private Function<Player, String> colorResolver = player -> null;
+    private Function<Player, Component> customNameResolver = player -> null;
 
     private final Map<UUID, Map<String, KnownTeam>> known = new HashMap<>();
     private Scheduler.Task timer;
@@ -59,6 +60,11 @@ public final class NametagManager implements Manager {
 
     public NametagManager color(Function<Player, String> resolver) {
         this.colorResolver = resolver == null ? player -> null : resolver;
+        return this;
+    }
+
+    public NametagManager customName(Function<Player, Component> resolver) {
+        this.customNameResolver = resolver == null ? player -> null : resolver;
         return this;
     }
 
@@ -222,6 +228,27 @@ public final class NametagManager implements Manager {
                     iterator.remove();
                 }
             }
+        }
+
+        syncCustomNames(players);
+    }
+
+    private void syncCustomNames(List<Player> players) {
+        for (Player player : players) {
+            if (player == null || !player.isOnline()) continue;
+
+            Component desired = customNameResolver.apply(player);
+            boolean visible = desired != null;
+
+            server.scheduler().runEntity(player, () -> {
+                if (!player.isOnline()) return;
+
+                Component current = player.customName();
+                if (current == null ? desired != null : !current.equals(desired)) {
+                    player.customName(desired);
+                    player.setCustomNameVisible(visible);
+                }
+            });
         }
     }
 
