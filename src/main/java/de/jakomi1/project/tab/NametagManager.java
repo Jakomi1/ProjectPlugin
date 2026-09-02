@@ -13,12 +13,12 @@ import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public final class NametagManager implements Manager {
@@ -35,7 +35,7 @@ public final class NametagManager implements Manager {
     private Function<Player, String> colorResolver = player -> null;
     private Function<Player, Component> customNameResolver = player -> null;
 
-    private final Map<UUID, Map<String, KnownTeam>> known = new HashMap<>();
+    private final Map<UUID, Map<String, KnownTeam>> known = new ConcurrentHashMap<>();
     private Scheduler.Task timer;
 
     public NametagManager(ProjectServer server) {
@@ -145,92 +145,111 @@ public final class NametagManager implements Manager {
         for (Player player : players) {
             online.add(player.getUniqueId());
         }
-        known.keySet().removeIf(uuid -> !online.contains(uuid));
 
-        for (Player viewer : players) {
-            Map<String, KnownTeam> viewerKnown = known.computeIfAbsent(
-                    viewer.getUniqueId(),
-                    uuid -> new HashMap<>()
-            );
-
-            for (DesiredTeam desiredTeam : desired.values()) {
-                KnownTeam current = viewerKnown.get(desiredTeam.name);
-
-                if (current == null) {
-                    Object scoreboard = bridge.newScoreboard();
-                    Object team = bridge.newTeam(scoreboard, desiredTeam.name);
-                    if (team == null) continue;
-
-                    bridge.configureTeam(team, desiredTeam.prefix, desiredTeam.suffix);
-
-                    if (desiredTeam.color != null) {
-                        bridge.setColor(team, desiredTeam.color);
-                    }
-
-                    for (String member : desiredTeam.members) {
-                        bridge.addPlayerToTeam(scoreboard, team, member);
-                    }
-
-                    current = new KnownTeam(
-                            desiredTeam.name,
-                            team,
-                            desiredTeam.prefix,
-                            desiredTeam.suffix,
-                            desiredTeam.color
-                    );
-                    current.members.addAll(desiredTeam.members);
-                    viewerKnown.put(desiredTeam.name, current);
-
-                    send(viewer, bridge.addOrModifyPacket(team, true));
-                } else {
-                    boolean styleChanged = !desiredTeam.prefix.equals(current.prefix)
-                            || !desiredTeam.suffix.equals(current.suffix)
-                            || desiredTeam.color != current.color;
-
-                    if (styleChanged) {
-                        bridge.configureTeam(current.team, desiredTeam.prefix, desiredTeam.suffix);
-                        if (desiredTeam.color != null) {
-                            bridge.setColor(current.team, desiredTeam.color);
-                        } else {
-                            bridge.setColor(current.team, bridge.colorWhite());
-                        }
-                        current.prefix = desiredTeam.prefix;
-                        current.suffix = desiredTeam.suffix;
-                        current.color = desiredTeam.color;
-                        send(viewer, bridge.addOrModifyPacket(current.team, false));
-                    }
-
-                    Set<String> additions = new HashSet<>(desiredTeam.members);
-                    additions.removeAll(current.members);
-
-                    Set<String> removals = new HashSet<>(current.members);
-                    removals.removeAll(desiredTeam.members);
-
-                    if (!removals.isEmpty()) {
-                        send(viewer, bridge.multiplePlayerPacket(current.team, removals, false));
-                    }
-
-                    if (!additions.isEmpty()) {
-                        send(viewer, bridge.multiplePlayerPacket(current.team, additions, true));
-                    }
-
-                    current.members.clear();
-                    current.members.addAll(desiredTeam.members);
-                }
-            }
-
-            Iterator<Map.Entry<String, KnownTeam>> iterator = viewerKnown.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, KnownTeam> entry = iterator.next();
-
-                if (!desired.containsKey(entry.getKey())) {
-                    send(viewer, bridge.removePacket(entry.getValue().team));
-                    iterator.remove();
-                }
+        for (UUID uuid : known.keySet()) {
+            if (!online.contains(uuid)) {
+                known.remove(uuid);
             }
         }
 
+        for (Player viewer : players) {
+            server.scheduler().runEntity(viewer, () -> reconcileViewer(viewer, desired, online));
+        }
+
         syncCustomNames(players);
+    }
+
+    private void reconcileViewer(Player viewer, Map<String, DesiredTeam> desired, Set<UUID> online) {
+        if (viewer == null || !viewer.isOnline() || !bridge.isReady()) return;
+
+        Map<String, KnownTeam> viewerKnown = known.computeIfAbsent(
+                viewer.getUniqueId(),
+                uuid -> new HashMap<>()
+        );
+
+        // Phase 1: Member removal packets for still-existing teams, sent BEFORE any addition,
+        // so a player is never moved to a new team before the client has left the old one.
+        for (DesiredTeam desiredTeam : desired.values()) {
+            KnownTeam current = viewerKnown.get(desiredTeam.name);
+            if (current == null) continue;
+
+            Set<String> removals = new HashSet<>(current.members);
+            removals.removeAll(desiredTeam.members);
+
+            if (!removals.isEmpty()) {
+                bridge.send(viewer, bridge.multiplePlayerPacket(current.team, removals, false));
+            }
+        }
+
+        // Phase 2: Create new teams / update style / add members.
+        for (DesiredTeam desiredTeam : desired.values()) {
+            KnownTeam current = viewerKnown.get(desiredTeam.name);
+
+            if (current == null) {
+                Object scoreboard = bridge.newScoreboard();
+                Object team = bridge.newTeam(scoreboard, desiredTeam.name);
+                if (team == null) continue;
+
+                bridge.configureTeam(team, desiredTeam.prefix, desiredTeam.suffix);
+
+                if (desiredTeam.color != null) {
+                    bridge.setColor(team, desiredTeam.color);
+                }
+
+                for (String member : desiredTeam.members) {
+                    bridge.addPlayerToTeam(scoreboard, team, member);
+                }
+
+                current = new KnownTeam(
+                        desiredTeam.name,
+                        team,
+                        desiredTeam.prefix,
+                        desiredTeam.suffix,
+                        desiredTeam.color
+                );
+                current.members.addAll(desiredTeam.members);
+                viewerKnown.put(desiredTeam.name, current);
+
+                bridge.send(viewer, bridge.addOrModifyPacket(team, true));
+            } else {
+                boolean styleChanged = !desiredTeam.prefix.equals(current.prefix)
+                        || !desiredTeam.suffix.equals(current.suffix)
+                        || desiredTeam.color != current.color;
+
+                if (styleChanged) {
+                    bridge.configureTeam(current.team, desiredTeam.prefix, desiredTeam.suffix);
+                    if (desiredTeam.color != null) {
+                        bridge.setColor(current.team, desiredTeam.color);
+                    } else {
+                        bridge.setColor(current.team, bridge.colorWhite());
+                    }
+                    current.prefix = desiredTeam.prefix;
+                    current.suffix = desiredTeam.suffix;
+                    current.color = desiredTeam.color;
+                    bridge.send(viewer, bridge.addOrModifyPacket(current.team, false));
+                }
+
+                Set<String> additions = new HashSet<>(desiredTeam.members);
+                additions.removeAll(current.members);
+
+                if (!additions.isEmpty()) {
+                    bridge.send(viewer, bridge.multiplePlayerPacket(current.team, additions, true));
+                }
+
+                current.members.clear();
+                current.members.addAll(desiredTeam.members);
+            }
+        }
+
+        // Phase 3: Remove teams that are no longer desired.
+        Set<String> toRemove = new HashSet<>(viewerKnown.keySet());
+        toRemove.removeAll(desired.keySet());
+
+        for (String name : toRemove) {
+            KnownTeam removed = viewerKnown.get(name);
+            bridge.send(viewer, bridge.removePacket(removed.team));
+            viewerKnown.remove(name);
+        }
     }
 
     private void syncCustomNames(List<Player> players) {
@@ -257,12 +276,6 @@ public final class NametagManager implements Manager {
         if (name == null || name.isBlank()) return null;
 
         return bridge.color(name);
-    }
-
-    private void send(Player viewer, Object packet) {
-        if (packet == null) return;
-
-        server.scheduler().runEntity(viewer, () -> bridge.send(viewer, packet));
     }
 
     static Component rolePrefix(Role role) {
