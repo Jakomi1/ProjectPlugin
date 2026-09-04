@@ -8,6 +8,7 @@
  */
 package de.jakomi1.project.invsee.session;
 
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -34,7 +35,19 @@ public abstract class SessionManager {
         return plugin;
     }
 
+    private void onGlobal(Runnable runnable) {
+        if (Bukkit.isGlobalTickThread()) {
+            runnable.run();
+            return;
+        }
+        Bukkit.getGlobalRegionScheduler().execute(plugin, runnable);
+    }
+
     public void addSubscriberToSession(OfflinePlayer player, UUID subscriber) {
+        onGlobal(() -> addSubscriberOnGlobal(player, subscriber));
+    }
+
+    private void addSubscriberOnGlobal(OfflinePlayer player, UUID subscriber) {
         this.sessions.stream().filter(session -> session.getSubscribers().contains(subscriber))
                 .forEach(session -> session.removeSubscriber(subscriber));
 
@@ -45,6 +58,10 @@ public abstract class SessionManager {
     }
 
     public void removeSubscriberFromSession(@NotNull HumanEntity subscriber) {
+        onGlobal(() -> removeSubscriberOnGlobal(subscriber));
+    }
+
+    private void removeSubscriberOnGlobal(@NotNull HumanEntity subscriber) {
         Optional<? extends Session> first = this.sessions.stream()
                 .filter(session -> session.getSubscribers().contains(subscriber.getUniqueId()))
                 .findFirst();
@@ -61,6 +78,10 @@ public abstract class SessionManager {
     }
 
     public void updateContent(Player player) {
+        onGlobal(() -> updateContentOnGlobal(player));
+    }
+
+    private void updateContentOnGlobal(Player player) {
         Optional<? extends Session> optionalSession = this.sessions.stream()
                 .filter(session -> session.getUniqueIdOfObservedPlayer().equals(player.getUniqueId()))
                 .findFirst();
