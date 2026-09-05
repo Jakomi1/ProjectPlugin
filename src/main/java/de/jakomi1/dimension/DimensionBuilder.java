@@ -41,9 +41,13 @@ public final class DimensionBuilder {
     private int monsterSpawnLightMax = 7;
     private int monsterSpawnLightMode = LIGHT_UNIFORM;
     private int monsterSpawnBlockLightLimit;
-    private String effects = "minecraft:overworld";
+    private boolean hasEnderDragonFight;
+    private boolean hasFixedTime;
+    private String skybox = "overworld";
+    private String cardinalLight = "default";
+    private String defaultClock;
+    private final List<String> timelines = new ArrayList<>();
     private String infiniburn = "#minecraft:infiniburn_overworld";
-    private Long fixedTime;
 
     private String generatorType = GENERATOR_NOISE;
     private String noiseSettings = "minecraft:overworld";
@@ -87,7 +91,12 @@ public final class DimensionBuilder {
         logicalHeight(384);
         minY(-64);
         height(384);
-        effects("minecraft:overworld");
+        skybox("overworld");
+        cardinalLight("default");
+        defaultClock("minecraft:overworld");
+        timeline("#minecraft:in_overworld");
+        hasFixedTime(false);
+        hasEnderDragonFight(false);
         infiniburn("#minecraft:infiniburn_overworld");
         monsterSpawnLightUniform(0, 7);
         monsterSpawnBlockLightLimit(0);
@@ -110,7 +119,11 @@ public final class DimensionBuilder {
         logicalHeight(128);
         minY(0);
         height(256);
-        effects("minecraft:the_nether");
+        skybox("none");
+        cardinalLight("nether");
+        timeline("#minecraft:in_nether");
+        hasFixedTime(true);
+        hasEnderDragonFight(false);
         infiniburn("#minecraft:infiniburn_nether");
         monsterSpawnLightConstant(7);
         monsterSpawnBlockLightLimit(15);
@@ -129,11 +142,16 @@ public final class DimensionBuilder {
         hasSkylight(false);
         hasCeiling(false);
         coordinateScale(1.0);
-        ambientLight(0.0);
+        ambientLight(0.25);
         logicalHeight(256);
         minY(0);
         height(256);
-        effects("minecraft:the_end");
+        skybox("end");
+        cardinalLight("default");
+        defaultClock("minecraft:the_end");
+        timeline("#minecraft:in_end");
+        hasFixedTime(true);
+        hasEnderDragonFight(true);
         infiniburn("#minecraft:infiniburn_end");
         monsterSpawnLightConstant(0);
         monsterSpawnBlockLightLimit(0);
@@ -236,7 +254,62 @@ public final class DimensionBuilder {
     }
 
     public DimensionBuilder effects(String effects) {
-        this.effects = effects;
+        switch (effects) {
+            case "minecraft:the_nether" -> {
+                skybox("none");
+                cardinalLight("nether");
+                timeline("#minecraft:in_nether");
+                hasFixedTime(true);
+            }
+            case "minecraft:the_end" -> {
+                skybox("end");
+                cardinalLight("default");
+                defaultClock("minecraft:the_end");
+                timeline("#minecraft:in_end");
+                hasFixedTime(true);
+                hasEnderDragonFight(true);
+            }
+            case "minecraft:overworld_caves" -> {
+                skybox("overworld");
+                cardinalLight("default");
+            }
+            default -> {
+                skybox("overworld");
+                cardinalLight("default");
+                defaultClock("minecraft:overworld");
+                timeline("#minecraft:in_overworld");
+            }
+        }
+        return this;
+    }
+
+    public DimensionBuilder hasEnderDragonFight(boolean hasEnderDragonFight) {
+        this.hasEnderDragonFight = hasEnderDragonFight;
+        return this;
+    }
+
+    public DimensionBuilder hasFixedTime(boolean hasFixedTime) {
+        this.hasFixedTime = hasFixedTime;
+        return this;
+    }
+
+    public DimensionBuilder skybox(String skybox) {
+        this.skybox = skybox;
+        return this;
+    }
+
+    public DimensionBuilder cardinalLight(String cardinalLight) {
+        this.cardinalLight = cardinalLight;
+        return this;
+    }
+
+    public DimensionBuilder defaultClock(String defaultClock) {
+        this.defaultClock = defaultClock;
+        return this;
+    }
+
+    public DimensionBuilder timeline(String timeline) {
+        this.timelines.add(timeline);
         return this;
     }
 
@@ -246,7 +319,12 @@ public final class DimensionBuilder {
     }
 
     public DimensionBuilder fixedTime(long fixedTime) {
-        this.fixedTime = fixedTime;
+        this.hasFixedTime = true;
+        return this;
+    }
+
+    public DimensionBuilder fixedTime(boolean hasFixedTime) {
+        this.hasFixedTime = hasFixedTime;
         return this;
     }
 
@@ -447,16 +525,32 @@ public final class DimensionBuilder {
         return monsterSpawnBlockLightLimit;
     }
 
-    String effects() {
-        return effects;
+    boolean hasEnderDragonFight() {
+        return hasEnderDragonFight;
+    }
+
+    boolean hasFixedTime() {
+        return hasFixedTime;
+    }
+
+    String skybox() {
+        return skybox;
+    }
+
+    String cardinalLight() {
+        return cardinalLight;
+    }
+
+    String defaultClock() {
+        return defaultClock;
+    }
+
+    List<String> timelines() {
+        return timelines;
     }
 
     String infiniburn() {
         return infiniburn;
-    }
-
-    Long fixedTime() {
-        return fixedTime;
     }
 
     String generatorType() {

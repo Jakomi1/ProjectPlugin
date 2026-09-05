@@ -1,7 +1,9 @@
 package de.jakomi1.dimension;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import de.jakomi1.biome.BiomeDatapackWriter;
 import de.jakomi1.biome.BiomeDefinition;
 import de.jakomi1.datapack.DatapackMcmeta;
@@ -101,15 +103,11 @@ final class DimensionDatapack {
 
     private JsonObject dimensionTypeJson(DimensionDefinition dimension) {
         JsonObject root = new JsonObject();
-        root.addProperty("ultrawarm", dimension.ultrawarm());
-        root.addProperty("natural", dimension.natural());
-        root.addProperty("piglin_safe", dimension.piglinSafe());
-        root.addProperty("respawn_anchor_works", dimension.respawnAnchorWorks());
-        root.addProperty("bed_works", dimension.bedWorks());
-        root.addProperty("has_raids", dimension.hasRaids());
+
+        root.addProperty("coordinate_scale", dimension.coordinateScale());
         root.addProperty("has_skylight", dimension.hasSkylight());
         root.addProperty("has_ceiling", dimension.hasCeiling());
-        root.addProperty("coordinate_scale", dimension.coordinateScale());
+        root.addProperty("has_ender_dragon_fight", dimension.hasEnderDragonFight());
         root.addProperty("ambient_light", dimension.ambientLight());
         root.addProperty("logical_height", dimension.logicalHeight());
         root.addProperty("min_y", dimension.minY());
@@ -117,32 +115,79 @@ final class DimensionDatapack {
         root.add("monster_spawn_light_level", monsterSpawnLight(dimension));
         root.addProperty("monster_spawn_block_light_limit", dimension.monsterSpawnBlockLightLimit());
 
-        if (dimension.effects() != null) {
-            root.addProperty("effects", dimension.effects());
+        if (dimension.hasFixedTime()) {
+            root.addProperty("has_fixed_time", true);
         }
         if (dimension.infiniburn() != null) {
             root.addProperty("infiniburn", dimension.infiniburn());
         }
-        if (dimension.fixedTime() != null) {
-            root.addProperty("fixed_time", dimension.fixedTime());
+        if (!"overworld".equals(dimension.skybox())) {
+            root.addProperty("skybox", dimension.skybox());
+        }
+        if (!"default".equals(dimension.cardinalLight())) {
+            root.addProperty("cardinal_light", dimension.cardinalLight());
+        }
+        if (dimension.defaultClock() != null) {
+            root.addProperty("default_clock", dimension.defaultClock());
+        }
+        if (!dimension.timelines().isEmpty()) {
+            if (dimension.timelines().size() == 1) {
+                root.addProperty("timelines", dimension.timelines().get(0));
+            } else {
+                JsonArray timelines = new JsonArray();
+                for (String timeline : dimension.timelines()) {
+                    timelines.add(timeline);
+                }
+                root.add("timelines", timelines);
+            }
         }
 
+        root.add("attributes", attributes(dimension));
         return root;
     }
 
-    private JsonObject monsterSpawnLight(DimensionDefinition dimension) {
-        JsonObject root = new JsonObject();
+    private static JsonElement monsterSpawnLight(DimensionDefinition dimension) {
         if (dimension.monsterSpawnLightConstantMode()) {
-            root.addProperty("type", "minecraft:constant");
-            root.addProperty("value", dimension.monsterSpawnLightMin());
-        } else {
-            root.addProperty("type", "minecraft:uniform");
-            JsonObject value = new JsonObject();
-            value.addProperty("min_inclusive", dimension.monsterSpawnLightMin());
-            value.addProperty("max_inclusive", dimension.monsterSpawnLightMax());
-            root.add("value", value);
+            return new JsonPrimitive(dimension.monsterSpawnLightMin());
         }
-        return root;
+        JsonObject uniform = new JsonObject();
+        uniform.addProperty("type", "minecraft:uniform");
+        uniform.addProperty("min_inclusive", dimension.monsterSpawnLightMin());
+        uniform.addProperty("max_inclusive", dimension.monsterSpawnLightMax());
+        return uniform;
+    }
+
+    private static JsonObject attributes(DimensionDefinition dimension) {
+        JsonObject attributes = new JsonObject();
+
+        if (dimension.ultrawarm()) {
+            attributes.addProperty("minecraft:gameplay/water_evaporates", true);
+            attributes.addProperty("minecraft:gameplay/fast_lava", true);
+            JsonObject particle = new JsonObject();
+            particle.addProperty("type", "minecraft:dripping_dripstone_lava");
+            attributes.add("minecraft:visual/default_dripstone_particle", particle);
+        }
+
+        JsonObject bedRule = new JsonObject();
+        if (dimension.bedWorks()) {
+            bedRule.addProperty("can_sleep", "when_dark");
+            bedRule.addProperty("can_set_spawn", "always");
+            JsonObject errorMessage = new JsonObject();
+            errorMessage.addProperty("translate", "block.minecraft.bed.no_sleep");
+            bedRule.add("error_message", errorMessage);
+        } else {
+            bedRule.addProperty("can_sleep", "never");
+            bedRule.addProperty("can_set_spawn", "never");
+            bedRule.addProperty("explodes", true);
+        }
+        attributes.add("minecraft:gameplay/bed_rule", bedRule);
+
+        attributes.addProperty("minecraft:gameplay/respawn_anchor_works", dimension.respawnAnchorWorks());
+        attributes.addProperty("minecraft:gameplay/piglins_zombify", !dimension.piglinSafe());
+        attributes.addProperty("minecraft:gameplay/can_start_raid", dimension.hasRaids());
+        attributes.addProperty("minecraft:gameplay/nether_portal_spawns_piglin", dimension.natural());
+
+        return attributes;
     }
 
     private JsonObject dimensionJson(DimensionDefinition dimension) {

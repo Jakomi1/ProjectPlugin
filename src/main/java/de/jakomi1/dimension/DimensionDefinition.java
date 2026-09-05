@@ -31,9 +31,13 @@ public final class DimensionDefinition {
     private final int monsterSpawnLightMax;
     private final boolean monsterSpawnLightConstantMode;
     private final int monsterSpawnBlockLightLimit;
-    private final String effects;
+    private final boolean hasEnderDragonFight;
+    private final boolean hasFixedTime;
+    private final String skybox;
+    private final String cardinalLight;
+    private final String defaultClock;
+    private final List<String> timelines;
     private final String infiniburn;
-    private final Long fixedTime;
 
     private final String generatorType;
     private final String noiseSettings;
@@ -77,9 +81,13 @@ public final class DimensionDefinition {
         this.monsterSpawnLightMax = builder.monsterSpawnLightMax();
         this.monsterSpawnLightConstantMode = builder.monsterSpawnLightConstantMode();
         this.monsterSpawnBlockLightLimit = builder.monsterSpawnBlockLightLimit();
-        this.effects = builder.effects();
+        this.hasEnderDragonFight = builder.hasEnderDragonFight();
+        this.hasFixedTime = builder.hasFixedTime();
+        this.skybox = builder.skybox();
+        this.cardinalLight = builder.cardinalLight();
+        this.defaultClock = builder.defaultClock();
+        this.timelines = new ArrayList<>(builder.timelines());
         this.infiniburn = builder.infiniburn();
-        this.fixedTime = builder.fixedTime();
 
         this.generatorType = builder.generatorType();
         this.noiseSettings = builder.noiseSettings();
@@ -185,16 +193,32 @@ public final class DimensionDefinition {
         return monsterSpawnBlockLightLimit;
     }
 
-    public String effects() {
-        return effects;
+    public boolean hasEnderDragonFight() {
+        return hasEnderDragonFight;
+    }
+
+    public boolean hasFixedTime() {
+        return hasFixedTime;
+    }
+
+    public String skybox() {
+        return skybox;
+    }
+
+    public String cardinalLight() {
+        return cardinalLight;
+    }
+
+    public String defaultClock() {
+        return defaultClock;
+    }
+
+    public List<String> timelines() {
+        return timelines;
     }
 
     public String infiniburn() {
         return infiniburn;
-    }
-
-    public Long fixedTime() {
-        return fixedTime;
     }
 
     public String generatorType() {

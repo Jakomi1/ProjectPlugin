@@ -6,6 +6,7 @@ import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import java.io.IOException;
@@ -19,6 +20,12 @@ import java.util.function.Consumer;
 
 public final class DimensionManager implements Manager {
 
+    private static final long DEPLOY_DELAY_TICKS = 200L;
+
+    private static final String VANILLA_OVERWORLD = "minecraft:overworld";
+    private static final String VANILLA_THE_NETHER = "minecraft:the_nether";
+    private static final String VANILLA_THE_END = "minecraft:the_end";
+
     private final ProjectServer server;
     private final Map<String, DimensionDefinition> dimensions = new LinkedHashMap<>();
 
@@ -27,10 +34,15 @@ public final class DimensionManager implements Manager {
     private String description = "Generated dimensions";
     private boolean autoDeploy = true;
 
+    private boolean registerCommand = true;
+    private String permission;
+    private final DimensionCommand command;
+
     private boolean enabled;
 
     public DimensionManager(ProjectServer server) {
         this.server = server;
+        this.command = new DimensionCommand(this);
     }
 
     @Override
@@ -38,8 +50,12 @@ public final class DimensionManager implements Manager {
         if (enabled) return this;
         enabled = true;
 
+        if (registerCommand) {
+            command.register(server.plugin());
+        }
+
         if (autoDeploy && !dimensions.isEmpty()) {
-            deploy();
+            server.scheduler().runLater(this::deploy, DEPLOY_DELAY_TICKS);
         }
         return this;
     }
@@ -81,6 +97,28 @@ public final class DimensionManager implements Manager {
     public DimensionManager autoDeploy(boolean autoDeploy) {
         this.autoDeploy = autoDeploy;
         return this;
+    }
+
+    public DimensionManager command(boolean registerCommand) {
+        this.registerCommand = registerCommand;
+        return this;
+    }
+
+    public boolean command() {
+        return registerCommand;
+    }
+
+    public DimensionManager permission(String permission) {
+        this.permission = permission == null || permission.isBlank() ? null : permission;
+        return this;
+    }
+
+    public String permission() {
+        return permission;
+    }
+
+    public ProjectServer server() {
+        return server;
     }
 
     public DimensionBuilder create(String path) {
@@ -149,11 +187,11 @@ public final class DimensionManager implements Manager {
     }
 
     public World world(String id) {
-        return Bukkit.getWorld(id);
+        return resolveWorld(id);
     }
 
     public World world(DimensionDefinition dimension) {
-        return Bukkit.getWorld(dimension.id());
+        return dimension == null ? null : world(dimension.id());
     }
 
     public boolean isLoaded(String id) {
@@ -179,23 +217,113 @@ public final class DimensionManager implements Manager {
 
     public void teleport(Player player, String id) {
         require(id);
-        teleport(player, require(id));
-    }
-
-    public void teleport(Player player, DimensionDefinition dimension) {
-        World world = world(dimension);
+        World world = world(id);
         if (world != null) {
             teleportAsync(player, world.getSpawnLocation());
             return;
         }
 
-        dispatch("execute in " + dimension.id() + " run tp " + player.getName());
+        dispatch("execute in " + id + " run tp " + player.getName());
         server.scheduler().runLater(() -> {
-            World loaded = world(dimension);
+            World loaded = world(id);
             if (loaded != null && player.isOnline()) {
                 teleportAsync(player, loaded.getSpawnLocation());
             }
         }, 10L);
+    }
+
+    public void teleport(Player player, DimensionDefinition dimension) {
+        if (dimension == null) throw new IllegalArgumentException("Dimension darf nicht null sein.");
+        teleport(player, dimension.id());
+    }
+
+    public void teleport(Player player, String id, double x, double y, double z) {
+        World world = world(id);
+        if (world != null) {
+            teleportAsync(player, new Location(world, x, y, z));
+            return;
+        }
+
+        if (!contains(id) && !isVanillaDimension(id)) {
+            throw new IllegalStateException("Dimension '" + id + "' ist nicht registriert oder geladen.");
+        }
+
+        dispatch("execute in " + id + " run tp " + player.getName());
+        server.scheduler().runLater(() -> {
+            World loaded = world(id);
+            if (loaded != null && player.isOnline()) {
+                teleportAsync(player, new Location(loaded, x, y, z));
+            }
+        }, 10L);
+    }
+
+    public void teleport(Player player, String id, double x, double y, double z, float yaw, float pitch) {
+        World world = world(id);
+        if (world != null) {
+            teleportAsync(player, new Location(world, x, y, z, yaw, pitch));
+            return;
+        }
+
+        if (!contains(id) && !isVanillaDimension(id)) {
+            throw new IllegalStateException("Dimension '" + id + "' ist nicht registriert oder geladen.");
+        }
+
+        dispatch("execute in " + id + " run tp " + player.getName());
+        server.scheduler().runLater(() -> {
+            World loaded = world(id);
+            if (loaded != null && player.isOnline()) {
+                teleportAsync(player, new Location(loaded, x, y, z, yaw, pitch));
+            }
+        }, 10L);
+    }
+
+    private World resolveWorld(String id) {
+        if (id == null) return null;
+
+        World world = Bukkit.getWorld(id);
+        if (world != null) return world;
+
+        for (World candidate : Bukkit.getWorlds()) {
+            if (candidate.getKey().asString().equalsIgnoreCase(id)
+                    || candidate.getName().equalsIgnoreCase(id)) {
+                return candidate;
+            }
+        }
+
+        String simple = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
+        switch (simple) {
+            case "overworld" -> {
+                for (World candidate : Bukkit.getWorlds()) {
+                    if (candidate.getEnvironment() == Environment.NORMAL) {
+                        return candidate;
+                    }
+                }
+            }
+            case "the_nether" -> {
+                for (World candidate : Bukkit.getWorlds()) {
+                    if (candidate.getEnvironment() == Environment.NETHER) {
+                        return candidate;
+                    }
+                }
+            }
+            case "the_end" -> {
+                for (World candidate : Bukkit.getWorlds()) {
+                    if (candidate.getEnvironment() == Environment.THE_END) {
+                        return candidate;
+                    }
+                }
+            }
+            default -> {
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isVanillaDimension(String id) {
+        return VANILLA_OVERWORLD.equalsIgnoreCase(id)
+                || VANILLA_THE_NETHER.equalsIgnoreCase(id)
+                || VANILLA_THE_END.equalsIgnoreCase(id);
     }
 
     private void teleportAsync(Player player, Location location) {
@@ -251,7 +379,9 @@ public final class DimensionManager implements Manager {
                     new ArrayList<>(dimensions.values())
             );
 
-            new ManagedDatapack(server.plugin(), packName).update(datapack::write, world.getWorldFolder().toPath());
+            ManagedDatapack managed = new ManagedDatapack(server.plugin(), packName);
+            managed.update(datapack::write, world.getWorldFolder().toPath());
+            managed.load();
             server.plugin().getLogger().info("DimensionManager: Datapack '" + packName + "' mit " + dimensions.size() + " Dimensionen aktualisiert.");
         } catch (IOException e) {
             server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
