@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
+import org.bukkit.WorldCreator;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import java.io.IOException;
@@ -212,6 +213,7 @@ public final class DimensionManager implements Manager {
             server.plugin().getLogger().warning("DimensionManager: '" + id + "' konnte nicht geladen werden, kein Spieler online.");
             return;
         }
+        ensureWorld(id);
         dispatch("execute in " + id + " run tp " + player.getName());
     }
 
@@ -223,6 +225,7 @@ public final class DimensionManager implements Manager {
             return;
         }
 
+        ensureWorld(id);
         dispatch("execute in " + id + " run tp " + player.getName());
         server.scheduler().runLater(() -> {
             World loaded = world(id);
@@ -248,6 +251,7 @@ public final class DimensionManager implements Manager {
             throw new IllegalStateException("Dimension '" + id + "' ist nicht registriert oder geladen.");
         }
 
+        ensureWorld(id);
         dispatch("execute in " + id + " run tp " + player.getName());
         server.scheduler().runLater(() -> {
             World loaded = world(id);
@@ -268,6 +272,7 @@ public final class DimensionManager implements Manager {
             throw new IllegalStateException("Dimension '" + id + "' ist nicht registriert oder geladen.");
         }
 
+        ensureWorld(id);
         dispatch("execute in " + id + " run tp " + player.getName());
         server.scheduler().runLater(() -> {
             World loaded = world(id);
@@ -386,10 +391,50 @@ public final class DimensionManager implements Manager {
         } catch (IOException e) {
             server.plugin().getLogger().warning("DimensionManager: Datapack konnte nicht aktualisiert werden: " + e.getMessage());
         }
+
+        ensureWorldsLater();
     }
 
     public void redeploy() {
         deploy();
+    }
+
+    private void ensureWorldsLater() {
+        server.scheduler().runLater(() -> {
+            for (DimensionDefinition dimension : new ArrayList<>(dimensions.values())) {
+                if (isVanillaDimension(dimension.id())) continue;
+                if (world(dimension.id()) != null) continue;
+                createWorld(dimension.id());
+            }
+        }, 20L);
+    }
+
+    private void ensureWorld(String id) {
+        if (isVanillaDimension(id)) return;
+        if (world(id) != null) return;
+        if (!contains(id)) return;
+        server.scheduler().runGlobal(() -> createWorld(id));
+    }
+
+    private void createWorld(String id) {
+        if (world(id) != null) return;
+        DimensionDefinition dimension = dimensions.get(id);
+        if (dimension == null) return;
+        try {
+            WorldCreator creator = new WorldCreator(id);
+            creator.environment(environmentFor(dimension));
+            Bukkit.createWorld(creator);
+            server.plugin().getLogger().info("DimensionManager: Welt '" + id + "' erzeugt.");
+        } catch (Throwable t) {
+            server.plugin().getLogger().warning(
+                    "DimensionManager: Welt '" + id + "' konnte nicht erzeugt werden: " + t.getMessage());
+        }
+    }
+
+    private static Environment environmentFor(DimensionDefinition dimension) {
+        if (dimension.ultrawarm()) return Environment.NETHER;
+        if (dimension.hasEnderDragonFight()) return Environment.THE_END;
+        return Environment.NORMAL;
     }
 
     public void clear() {
