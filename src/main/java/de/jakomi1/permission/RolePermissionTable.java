@@ -25,7 +25,7 @@ public final class RolePermissionTable extends KeyValueTable<String, String> {
         if (!permissions.add(permission.trim())) return;
 
         put(role.name(), join(permissions));
-        flushNow();
+        flushAsync();
     }
 
     public void removePermission(Role role, String permission) {
@@ -39,7 +39,7 @@ public final class RolePermissionTable extends KeyValueTable<String, String> {
         } else {
             put(role.name(), join(permissions));
         }
-        flushNow();
+        flushAsync();
     }
 
     private static Set<String> parse(String raw) {

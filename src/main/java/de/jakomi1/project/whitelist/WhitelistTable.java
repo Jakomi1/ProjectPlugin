@@ -40,13 +40,13 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
             if (byName.name() != null && !byName.name().equals(name)) {
                 put(byName.uuid() != null ? uuidKey(byName.uuid()) : nameKey(normalized),
                         new WhitelistEntry(name, byName.uuid()));
-                flushNow();
+                flushAsync();
             }
             return;
         }
 
         put(nameKey(normalized), new WhitelistEntry(name, null));
-        flushNow();
+        flushAsync();
     }
 
     public void add(UUID uuid) {
@@ -55,7 +55,7 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
         if (uuidEntries.containsKey(uuid)) return;
 
         put(uuidKey(uuid), new WhitelistEntry(null, uuid));
-        flushNow();
+        flushAsync();
     }
 
     public void add(UUID uuid, String name) {
@@ -66,13 +66,13 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
         if (existing != null) {
             if (name != null && !name.equals(existing.name())) {
                 put(uuidKey(uuid), new WhitelistEntry(name, uuid));
-                flushNow();
+                flushAsync();
             }
             return;
         }
 
         put(uuidKey(uuid), new WhitelistEntry(name, uuid));
-        flushNow();
+        flushAsync();
     }
 
     public boolean isWhitelisted(String name) {
@@ -104,7 +104,7 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
             remove(nameKey(normalized));
         }
 
-        flushNow();
+        flushAsync();
     }
 
     public void removeEntry(UUID uuid) {
@@ -118,7 +118,7 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
         }
 
         remove(uuidKey(uuid));
-        flushNow();
+        flushAsync();
     }
 
     public void ensure(UUID uuid, String name) {
@@ -129,7 +129,7 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
         if (byUUID != null) {
             if (byUUID.name() == null || !byUUID.name().equals(name)) {
                 put(uuidKey(uuid), new WhitelistEntry(name, uuid));
-                flushNow();
+                flushAsync();
             }
             return;
         }
@@ -139,12 +139,12 @@ public final class WhitelistTable extends Table<String, WhitelistTable.Whitelist
         if (byName != null) {
             remove(nameKey(normalize(name)));
             put(uuidKey(uuid), new WhitelistEntry(name, uuid));
-            flushNow();
+            flushAsync();
             return;
         }
 
         put(uuidKey(uuid), new WhitelistEntry(name, uuid));
-        flushNow();
+        flushAsync();
     }
 
     public Collection<WhitelistEntry> all() {

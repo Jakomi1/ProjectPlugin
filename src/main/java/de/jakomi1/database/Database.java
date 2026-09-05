@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 public final class Database {
 
@@ -19,10 +20,11 @@ public final class Database {
 
     private final ProjectPlugin plugin;
     private final Scheduler scheduler;
-    private Connection connection;
+    private final ReentrantLock flushLock = new ReentrantLock();
+    private volatile Connection connection;
     private final List<Table<?, ?>> tables = new ArrayList<>();
     private final Map<Class<? extends Table<?, ?>>, Table<?, ?>> tableRegistry = new HashMap<>();
-    private File pluginFolder;
+    private volatile File pluginFolder;
 
     private boolean autoFlush = true;
     private long flushIntervalTicks = DEFAULT_FLUSH_INTERVAL_TICKS;
@@ -81,10 +83,10 @@ public final class Database {
 
     /**
      * Stößt einen vollständigen Flush aller Tabellen außerhalb des aktuellen
-     * Threads an (globaler Scheduler, auf Folia und Paper verfügbar).
+     * Threads an (asynchroner Scheduler, auf Folia und Paper verfügbar).
      */
     public void flushAllAsync() {
-        scheduler.runGlobal(this::flushAll);
+        scheduler.runAsync(this::flushAll);
     }
 
     private void startAutoFlush() {
@@ -94,7 +96,7 @@ public final class Database {
         }
 
         if (autoFlush && flushIntervalTicks > 0) {
-            flushTask = scheduler.runTimer(this::flushAll, flushIntervalTicks, flushIntervalTicks);
+            flushTask = scheduler.runAsyncTimer(this::flushAll, flushIntervalTicks, flushIntervalTicks);
         }
     }
 
@@ -128,6 +130,10 @@ public final class Database {
         return connection;
     }
 
+    ReentrantLock flushLock() {
+        return flushLock;
+    }
+
     public File pluginFolder() {
         return pluginFolder;
     }
@@ -144,12 +150,15 @@ public final class Database {
 
         if (connection == null) return;
 
+        flushLock.lock();
         try {
             for (Table<?, ?> table : tables) table.onShutdown();
             flushAll();
             connection.close();
         } catch (SQLException exception) {
             plugin.getLogger().severe("Fehler beim Shutdown der Datenbank: " + exception.getMessage());
+        } finally {
+            flushLock.unlock();
         }
     }
 }

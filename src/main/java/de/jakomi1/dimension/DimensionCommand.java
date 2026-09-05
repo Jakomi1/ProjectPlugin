@@ -4,6 +4,7 @@ import de.jakomi1.command.CustomCommand;
 import de.jakomi1.project.ProjectServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -36,7 +37,7 @@ public final class DimensionCommand implements CustomCommand {
 
     @Override
     public String usage() {
-        return "/dimension <dimension> teleport <x> <y> <z>";
+        return "/dimension <dimension> teleport <player> <x> <y> <z>";
     }
 
     @Override
@@ -57,12 +58,12 @@ public final class DimensionCommand implements CustomCommand {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(prefix().append(Component.text("Dieser Befehl ist nur für Spieler.", NamedTextColor.RED)));
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(prefix().append(Component.text("Dieser Befehl ist nur für Spieler ausführbar.", NamedTextColor.RED)));
             return true;
         }
 
-        if (args.length < 5) {
+        if (args.length < 6) {
             sender.sendMessage(prefix().append(Component.text(usage(), NamedTextColor.RED)));
             return true;
         }
@@ -73,9 +74,15 @@ public final class DimensionCommand implements CustomCommand {
             return true;
         }
 
-        double x = parseCoordinate(args[2], player.getLocation().getX());
-        double y = parseCoordinate(args[3], player.getLocation().getY());
-        double z = parseCoordinate(args[4], player.getLocation().getZ());
+        Player target = Bukkit.getPlayerExact(args[2]);
+        if (target == null) {
+            sender.sendMessage(prefix().append(Component.text("Spieler '" + args[2] + "' ist nicht online.", NamedTextColor.RED)));
+            return true;
+        }
+
+        double x = parseCoordinate(args[3], target.getLocation().getX());
+        double y = parseCoordinate(args[4], target.getLocation().getY());
+        double z = parseCoordinate(args[5], target.getLocation().getZ());
 
         if (Double.isNaN(x) || Double.isNaN(y) || Double.isNaN(z)) {
             sender.sendMessage(prefix().append(Component.text("Ungültige Koordinaten.", NamedTextColor.RED)));
@@ -83,8 +90,8 @@ public final class DimensionCommand implements CustomCommand {
         }
 
         try {
-            manager.teleport(player, dimension, x, y, z);
-            sender.sendMessage(prefix().append(Component.text("Teleportiere nach " + dimension + " (" + x + ", " + y + ", " + z + ") ...", NamedTextColor.GRAY)));
+            manager.teleport(target, dimension, x, y, z);
+            sender.sendMessage(prefix().append(Component.text("Teleportiere '" + target.getName() + "' nach " + dimension + " (" + x + ", " + y + ", " + z + ") ...", NamedTextColor.GRAY)));
         } catch (IllegalStateException e) {
             sender.sendMessage(prefix().append(Component.text(e.getMessage(), NamedTextColor.RED)));
         }
@@ -104,7 +111,12 @@ public final class DimensionCommand implements CustomCommand {
         if (args.length == 2) {
             return List.of("teleport");
         }
-        if (args.length == 3 || args.length == 4 || args.length == 5) {
+        if (args.length == 3) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .toList();
+        }
+        if (args.length == 4 || args.length == 5 || args.length == 6) {
             return List.of("~");
         }
         return List.of();

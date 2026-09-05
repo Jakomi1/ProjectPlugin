@@ -30,7 +30,7 @@ public final class PearlFixTable extends KeyValueTable<String, String> {
         } else {
             put(key, serialize(pearls));
         }
-        flushNow();
+        flushAsync();
     }
 
     public Set<SavedPearlState> loadPearls(UUID playerId) {
@@ -46,7 +46,7 @@ public final class PearlFixTable extends KeyValueTable<String, String> {
         if (playerId == null) return;
 
         remove(playerId.toString());
-        flushNow();
+        flushAsync();
     }
 
     private static String serialize(Set<SavedPearlState> pearls) {

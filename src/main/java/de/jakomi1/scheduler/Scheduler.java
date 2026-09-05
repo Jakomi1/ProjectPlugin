@@ -76,6 +76,22 @@ public final class Scheduler {
         Bukkit.getAsyncScheduler().runDelayed(plugin, task -> runnable.run(), delay * 50L, TimeUnit.MILLISECONDS);
     }
 
+    public Task runAsyncTimer(Runnable runnable, long delayTicks, long periodTicks) {
+        if (!enabled()) return Task.noop();
+
+        long delay = safeDelay(delayTicks);
+        long period = safePeriod(periodTicks);
+
+        ScheduledTask asyncTask = Bukkit.getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> runnable.run(),
+                delay * 50L,
+                period * 50L,
+                TimeUnit.MILLISECONDS
+        );
+        return new Task(asyncTask);
+    }
+
     public void runGlobal(Runnable runnable) {
         if (!enabled()) return;
 

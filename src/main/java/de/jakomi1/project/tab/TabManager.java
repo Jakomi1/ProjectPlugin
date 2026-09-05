@@ -12,6 +12,7 @@ import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.function.Function;
 
 public final class TabManager implements Manager {
@@ -26,6 +27,9 @@ public final class TabManager implements Manager {
     private Function<Player, Component> listNameProvider = player ->
             Component.text(player.getName(), NamedTextColor.WHITE);
 
+    private boolean customHeader;
+    private boolean customFooter;
+
     private boolean showDeaths;
 
     private Scheduler.Task timer;
@@ -35,11 +39,13 @@ public final class TabManager implements Manager {
     }
 
     public TabManager header(Function<Player, Component> provider) {
+        this.customHeader = provider != null;
         this.headerProvider = provider == null ? player -> defaultHeader() : provider;
         return this;
     }
 
     public TabManager footer(Function<Player, Component> provider) {
+        this.customFooter = provider != null;
         this.footerProvider = provider == null ? player -> defaultFooter() : provider;
         return this;
     }
@@ -108,8 +114,13 @@ public final class TabManager implements Manager {
     }
 
     public void updateAll() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            update(player);
+        List<Player> players = List.copyOf(Bukkit.getOnlinePlayers());
+
+        Component sharedHeader = customHeader ? null : defaultHeader();
+        Component sharedFooter = customFooter ? null : defaultFooter();
+
+        for (Player player : players) {
+            server.scheduler().runEntity(player, () -> sendUpdate(player, sharedHeader, sharedFooter));
         }
     }
 
@@ -120,6 +131,15 @@ public final class TabManager implements Manager {
                 headerProvider.apply(player),
                 footerProvider.apply(player)
         );
+        player.playerListName(listNameProvider.apply(player));
+    }
+
+    private void sendUpdate(Player player, Component sharedHeader, Component sharedFooter) {
+        if (player == null || !player.isOnline()) return;
+
+        Component header = sharedHeader != null ? sharedHeader : headerProvider.apply(player);
+        Component footer = sharedFooter != null ? sharedFooter : footerProvider.apply(player);
+        player.sendPlayerListHeaderAndFooter(header, footer);
         player.playerListName(listNameProvider.apply(player));
     }
 

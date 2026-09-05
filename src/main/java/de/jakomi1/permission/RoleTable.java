@@ -71,28 +71,28 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         if (uuid == null || role == null) return;
 
         put(uuid.toString(), new RoleEntry(role, name, true));
-        flushNow();
+        flushAsync();
     }
 
     public void block(UUID uuid) {
         if (uuid == null) return;
 
         put(uuid.toString(), new RoleEntry(null, null, true));
-        flushNow();
+        flushAsync();
     }
 
     public void setRole(UUID uuid, Role role, String name) {
         if (uuid == null || role == null) return;
 
         put(uuid.toString(), new RoleEntry(role, name, false));
-        flushNow();
+        flushAsync();
     }
 
     public void removeEntry(UUID uuid) {
         if (uuid == null) return;
 
         remove(uuid.toString());
-        flushNow();
+        flushAsync();
     }
 
     public void setName(UUID uuid, String name) {
@@ -103,7 +103,7 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
         if (previous == null) return;
 
         put(key, new RoleEntry(previous.role(), name, previous.override()));
-        flushNow();
+        flushAsync();
     }
 
     public void sync(Map<UUID, PlayerRole> supabaseRoles) {
@@ -128,7 +128,7 @@ public final class RoleTable extends Table<String, RoleTable.RoleEntry> {
             }
         }
 
-        flushNow();
+        flushAsync();
     }
 
     @Override

@@ -30,21 +30,21 @@ public final class TermsTable extends KeyValueTable<UUID, String> {
         if (uniqueId == null) return;
 
         put(uniqueId, playerName == null ? "accepted" : playerName);
-        flushNow();
+        flushAsync();
     }
 
     public void revoke(UUID uniqueId) {
         if (uniqueId == null) return;
 
         remove(uniqueId);
-        flushNow();
+        flushAsync();
     }
 
     public void clearAll() {
         for (UUID uniqueId : keys()) {
             remove(uniqueId);
         }
-        flushNow();
+        flushAsync();
     }
 
     public int acceptedCount() {

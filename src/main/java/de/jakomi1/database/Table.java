@@ -144,62 +144,70 @@ public abstract class Table<K, V> implements Registerable {
      */
     public final void flushAsync() {
         if (database == null) return;
-        database.scheduler().runGlobal(this::flushNow);
+        database.scheduler().runAsync(this::flushNow);
     }
 
     public final void flushNow() {
         Connection connection = connection();
         if (connection == null) return;
 
-        boolean autoCommit;
+        java.util.concurrent.locks.ReentrantLock flushLock = database.flushLock();
+        flushLock.lock();
         try {
-            autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-        } catch (SQLException ignored) {
-            return;
-        }
+            if (dirtyKeys.isEmpty() && removedKeys.isEmpty()) return;
 
-        try {
-            try (PreparedStatement upsert = connection.prepareStatement(schema.upsertSql())) {
-                for (K key : dirtyKeys) {
-                    V value = cache.get(key);
-                    if (value == null) continue;
-
-                    try {
-                        int index = bindKey(upsert, 1, key);
-                        bindValue(upsert, index, value);
-                        upsert.addBatch();
-                    } catch (SQLException ignored) {
-                    }
-                }
-                upsert.executeBatch();
-            }
-
-            try (PreparedStatement delete = connection.prepareStatement(schema.deleteByKeySql())) {
-                for (K key : removedKeys) {
-                    try {
-                        bindKey(delete, 1, key);
-                        delete.addBatch();
-                    } catch (SQLException ignored) {
-                    }
-                }
-                delete.executeBatch();
-            }
-
-            dirtyKeys.clear();
-            removedKeys.clear();
-
-            connection.commit();
-        } catch (SQLException exception) {
+            boolean autoCommit;
             try {
-                connection.rollback();
+                autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
             } catch (SQLException ignored) {
+                return;
+            }
+
+            try {
+                try (PreparedStatement upsert = connection.prepareStatement(schema.upsertSql())) {
+                    for (K key : dirtyKeys) {
+                        V value = cache.get(key);
+                        if (value == null) continue;
+
+                        try {
+                            int index = bindKey(upsert, 1, key);
+                            bindValue(upsert, index, value);
+                            upsert.addBatch();
+                        } catch (SQLException ignored) {
+                        }
+                    }
+                    upsert.executeBatch();
+                }
+
+                try (PreparedStatement delete = connection.prepareStatement(schema.deleteByKeySql())) {
+                    for (K key : removedKeys) {
+                        try {
+                            bindKey(delete, 1, key);
+                            delete.addBatch();
+                        } catch (SQLException ignored) {
+                        }
+                    }
+                    delete.executeBatch();
+                }
+
+                dirtyKeys.clear();
+                removedKeys.clear();
+
+                connection.commit();
+            } catch (SQLException exception) {
+                try {
+                    connection.rollback();
+                } catch (SQLException ignored) {
+                }
+            } finally {
+                try {
+                    connection.setAutoCommit(autoCommit);
+                } catch (SQLException ignored) {
+                }
             }
         } finally {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException ignored) {
-            }
+            flushLock.unlock();
         }
     }
 

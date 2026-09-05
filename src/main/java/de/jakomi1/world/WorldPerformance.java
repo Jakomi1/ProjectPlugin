@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -142,9 +143,10 @@ public final class WorldPerformance implements Manager {
 
         Map<String, int[]> selectedWorldMap = selectedEntry.getValue();
 
-        List<Runnable> worldActions = new ArrayList<>();
+        Map<World, List<Runnable>> worldActions = new LinkedHashMap<>();
 
         for (World world : Bukkit.getWorlds()) {
+            List<Runnable> actions = worldActions.computeIfAbsent(world, w -> new ArrayList<>());
             String name = world.getName();
             int[] values = selectedWorldMap.getOrDefault(name, new int[]{5, 8});
 
@@ -163,7 +165,7 @@ public final class WorldPerformance implements Manager {
 
             final int appliedSim = sim;
             final int appliedView = view;
-            worldActions.add(() -> {
+            actions.add(() -> {
                 world.setSimulationDistance(appliedSim);
                 world.setViewDistance(appliedView);
             });
@@ -192,7 +194,7 @@ public final class WorldPerformance implements Manager {
 
                 final int appliedLimit = Math.max(0, limit);
                 final int appliedTicks = Math.max(1, ticks);
-                worldActions.add(() -> {
+                actions.add(() -> {
                     world.setSpawnLimit(sc, appliedLimit);
                     world.setTicksPerSpawns(sc, appliedTicks);
                 });
@@ -201,15 +203,19 @@ public final class WorldPerformance implements Manager {
 
         Component info = buildConfigInfo(currentPlayerKey);
 
-        server.scheduler().runGlobal(() -> {
-            for (Runnable action : worldActions) {
-                try {
-                    action.run();
-                } catch (Exception e) {
-                    server.plugin().getLogger().warning("Fehler beim Anwenden der Distanz-/Spawn-Werte: " + e.getMessage());
+        for (Map.Entry<World, List<Runnable>> entry : worldActions.entrySet()) {
+            World world = entry.getKey();
+            List<Runnable> actions = entry.getValue();
+            server.scheduler().runRegion(world.getSpawnLocation(), () -> {
+                for (Runnable action : actions) {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        server.plugin().getLogger().warning("Fehler beim Anwenden der Distanz-/Spawn-Werte: " + e.getMessage());
+                    }
                 }
-            }
-        });
+            });
+        }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (server.permissions().roleOf(player.getUniqueId()).isOwner()) {

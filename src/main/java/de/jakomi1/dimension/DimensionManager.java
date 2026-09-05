@@ -5,6 +5,7 @@ import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
@@ -344,14 +345,16 @@ public final class DimensionManager implements Manager {
     }
 
     private void dispatch(String command) {
-        try {
-            CommandSender console = Bukkit.getConsoleSender();
-            if (console != null) {
-                Bukkit.dispatchCommand(console, command);
+        server.scheduler().runGlobal(() -> {
+            try {
+                CommandSender console = Bukkit.getConsoleSender();
+                if (console != null) {
+                    Bukkit.dispatchCommand(console, command);
+                }
+            } catch (Throwable t) {
+                server.plugin().getLogger().warning("DimensionManager: Befehl konnte nicht ausgeführt werden: " + t.getMessage());
             }
-        } catch (Throwable t) {
-            server.plugin().getLogger().warning("DimensionManager: Befehl konnte nicht ausgeführt werden: " + t.getMessage());
-        }
+        });
     }
 
     private void validate(DimensionDefinition dimension) {
@@ -421,7 +424,12 @@ public final class DimensionManager implements Manager {
         DimensionDefinition dimension = dimensions.get(id);
         if (dimension == null) return;
         try {
-            WorldCreator creator = new WorldCreator(id);
+            NamespacedKey key = NamespacedKey.fromString(id);
+            if (key == null) {
+                server.plugin().getLogger().warning("DimensionManager: Welt '" + id + "' konnte nicht erzeugt werden: Ungültiger NamespacedKey.");
+                return;
+            }
+            WorldCreator creator = new WorldCreator(key);
             creator.environment(environmentFor(dimension));
             Bukkit.createWorld(creator);
             server.plugin().getLogger().info("DimensionManager: Welt '" + id + "' erzeugt.");

@@ -16,12 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class RoleManager implements Manager {
 
     private final ProjectServer server;
     private final RoleRegistry registry;
-    private final Map<UUID, List<PermissionAttachment>> attachments = new HashMap<>();
+    private final Map<UUID, List<PermissionAttachment>> attachments = new ConcurrentHashMap<>();
 
     private RoleTable table;
     private RolePermissionTable rolePermissions;
@@ -30,8 +31,8 @@ public final class RoleManager implements Manager {
     private RolePlayerListener playerListener;
 
     private String permissionPrefix = "cracked";
-    private boolean enabled;
-    private boolean tablesRegistered;
+    private volatile boolean enabled;
+    private volatile boolean tablesRegistered;
 
     public RoleManager(ProjectServer server) {
         if (server == null) {
@@ -300,6 +301,15 @@ public final class RoleManager implements Manager {
             return this;
         }
 
+        server.scheduler().runEntity(player, () -> applyInternal(player));
+        return this;
+    }
+
+    private void applyInternal(Player player) {
+        if (player == null || !enabled || !player.isOnline()) {
+            return;
+        }
+
         initializeTables();
 
         removeAttachments(player);
@@ -347,8 +357,6 @@ public final class RoleManager implements Manager {
         player.setOp(role.isOwner());
         player.recalculatePermissions();
         player.updateCommands();
-
-        return this;
     }
 
     private void removeAttachments(Player player) {

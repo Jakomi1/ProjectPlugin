@@ -59,7 +59,7 @@ public final class GlobalSettingsTable extends KeyValueTable<String, String> {
 
     public void setString(String key, String value) {
         put(key, value);
-        flushNow();
+        flushAsync();
     }
 
     public boolean getBoolean(String key, boolean fallback) {

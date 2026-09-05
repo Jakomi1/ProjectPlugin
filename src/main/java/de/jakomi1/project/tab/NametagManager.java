@@ -36,6 +36,7 @@ public final class NametagManager implements Manager {
     private Function<Player, Component> customNameResolver = player -> null;
 
     private final Map<UUID, Map<String, KnownTeam>> known = new ConcurrentHashMap<>();
+    private final Map<UUID, Role> roleCache = new HashMap<>();
     private Scheduler.Task timer;
 
     public NametagManager(ProjectServer server) {
@@ -75,14 +76,19 @@ public final class NametagManager implements Manager {
 
     public NametagManager roles(RoleManager roles) {
         this.teamResolver = player -> {
-            Role role = roles.roleOf(player.getUniqueId());
+            Role role = cachedRole(roles, player);
             return role.isMember() ? null : role.name();
         };
         this.prefixResolver = player -> {
-            Role role = roles.roleOf(player.getUniqueId());
+            Role role = cachedRole(roles, player);
             return role.isMember() ? Component.empty() : rolePrefix(role);
         };
         return this;
+    }
+
+    private Role cachedRole(RoleManager roles, Player player) {
+        if (player == null) return Role.MEMBER;
+        return roleCache.computeIfAbsent(player.getUniqueId(), uuid -> roles.roleOf(uuid));
     }
 
     @Override
@@ -120,6 +126,8 @@ public final class NametagManager implements Manager {
     private void syncAll() {
         if (!bridge.isReady()) return;
         if (server.plugin() == null || !server.plugin().isEnabled()) return;
+
+        roleCache.clear();
 
         List<Player> players = List.copyOf(Bukkit.getOnlinePlayers());
 
