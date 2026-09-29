@@ -69,6 +69,15 @@ public final class PlaytimeManager implements Manager {
         return this;
     }
 
+    /**
+     * Wert einmal sofort uebernehmen, solange der Spieler noch geladen ist.
+     * Beim Quit aufrufen, damit die Zeit auch nach einem Absturz stimmt.
+     */
+    public PlaytimeManager saveNow(org.bukkit.entity.Player player) {
+        PlaytimeStore.saveNow(player);
+        return this;
+    }
+
     public PlaytimeManager command(boolean registerCommand) {
         this.registerCommand = registerCommand;
         return this;

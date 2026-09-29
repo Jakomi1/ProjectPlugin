@@ -16,8 +16,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public final class DimensionManager implements Manager {
@@ -31,6 +33,13 @@ public final class DimensionManager implements Manager {
     private final ProjectServer server;
     private final Map<String, DimensionDefinition> dimensions = new LinkedHashMap<>();
 
+    /**
+     * Gesperrte Dimensionen. Der Schluessel ist die kanonische ID, damit
+     * {@code minecraft:the_nether} und {@code the_nether} denselben Eintrag
+     * treffen.
+     */
+    private final Set<String> disabled = ConcurrentHashMap.newKeySet();
+
     private String namespace = "project";
     private String packName = "project_dimensions";
     private String description = "Generated dimensions";
@@ -39,18 +48,22 @@ public final class DimensionManager implements Manager {
     private boolean registerCommand = true;
     private String permission;
     private final DimensionCommand command;
+    private final DimensionAccessListener accessListener;
 
     private boolean enabled;
 
     public DimensionManager(ProjectServer server) {
         this.server = server;
         this.command = new DimensionCommand(this);
+        this.accessListener = new DimensionAccessListener(this);
     }
 
     @Override
     public DimensionManager enable() {
         if (enabled) return this;
         enabled = true;
+
+        accessListener.register(server.plugin());
 
         if (registerCommand) {
             command.register(server.plugin());
@@ -71,6 +84,112 @@ public final class DimensionManager implements Manager {
     public void disable() {
         if (!enabled) return;
         enabled = false;
+
+        accessListener.unregister();
+    }
+
+    /**
+     * Sperrt eine Dimension. Ab sofort kann niemand mehr hinein: Portale,
+     * Teleports, Respawns und End-Gateways werden abgewehrt, wer noch drin
+     * ist, wird zurueckgeholt.
+     *
+     * @return true wenn sich der Zustand geaendert hat
+     */
+    public boolean disableDimension(String id) {
+        String key = canonical(id);
+        if (key == null) return false;
+
+        if (!disabled.add(key)) return false;
+
+        evictPlayers(key);
+        return true;
+    }
+
+    /**
+     * Hebt die Sperre wieder auf. Die Welt selbst wird nicht entladen - das
+     * waere ein Eingriff in laufende Chunks und waere auf Folia nicht
+     * sicher. Wer nicht drin ist, ist nach dem Aufheben wieder frei
+     * hineinzuteleportieren.
+     *
+     * @return true wenn sich der Zustand geaendert hat
+     */
+    public boolean enableDimension(String id) {
+        String key = canonical(id);
+        if (key == null) return false;
+
+        return disabled.remove(key);
+    }
+
+    public boolean isDisabled(String id) {
+        String key = canonical(id);
+        return key != null && disabled.contains(key);
+    }
+
+    /** Prueft direkt eine geladene Welt. */
+    public boolean isDisabled(World world) {
+        if (world == null) return false;
+
+        return isDisabled(world.getKey().asString());
+    }
+
+    public boolean isDisabled(Location location) {
+        return location != null && isDisabled(location.getWorld());
+    }
+
+    public Set<String> disabledDimensions() {
+        return Set.copyOf(disabled);
+    }
+
+    public DimensionAccessListener accessListener() {
+        return accessListener;
+    }
+
+    /**
+     * Welt, in die zurueckgeholt wird. Immer die erste geladene NORMAL-Welt,
+     * damit niemand im End oder im Nether landet.
+     */
+    public Location fallbackSpawn() {
+        for (World candidate : Bukkit.getWorlds()) {
+            if (candidate.getEnvironment() == Environment.NORMAL) {
+                return candidate.getSpawnLocation();
+            }
+        }
+
+        return Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0).getSpawnLocation();
+    }
+
+    /**
+     * Holt alle Spieler aus einer gerade gesperrten Dimension. Ueber den
+     * Scheduler, damit es auf Folia nicht im falschen Region-Thread laeuft.
+     */
+    private void evictPlayers(String key) {
+        World world = resolveWorld(key);
+        if (world == null) return;
+
+        for (Player player : List.copyOf(Bukkit.getOnlinePlayers())) {
+            if (!world.equals(player.getWorld())) continue;
+
+            server.scheduler().runEntity(player, () -> accessListener.release(player));
+        }
+    }
+
+    /**
+     * Bringt eine ID auf die kanonische Form. Vanilla-Namen werden auf ihre
+     * Namespaced-Form gebracht, damit Schreibweise keine Rolle spielt.
+     */
+    private String canonical(String id) {
+        if (id == null || id.isBlank()) return null;
+
+        String trimmed = id.trim();
+
+        if (trimmed.equalsIgnoreCase("overworld")
+                || trimmed.equalsIgnoreCase("the_nether")
+                || trimmed.equalsIgnoreCase("the_end")) {
+            return VANILLA_OVERWORLD.equalsIgnoreCase(trimmed) ? VANILLA_OVERWORLD
+                    : trimmed.equalsIgnoreCase("the_nether") ? VANILLA_THE_NETHER : VANILLA_THE_END;
+        }
+
+        return trimmed.toLowerCase(Locale.ROOT);
     }
 
     public DimensionManager namespace(String namespace) {
