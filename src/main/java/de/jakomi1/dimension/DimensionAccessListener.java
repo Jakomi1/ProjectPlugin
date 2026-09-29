@@ -1,7 +1,9 @@
 package de.jakomi1.dimension;
 
 import de.jakomi1.listener.EventListener;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -23,50 +25,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Verhindert, dass eine deaktivierte Dimension betreten wird.
+ * Verhindert den Zugriff auf deaktivierte Dimensionen.
  *
- * <p>Es reicht nicht, nur das Teleportieren zu blocken: Nether-Portale,
- * End-Portale, Respawn-Anker, Betten und End-Gateways umgehen einen
- * Teleport-Befehl vollstaendig. Deshalb werden hier alle Wege abgedeckt, die
- * zu einer Weltwechsel fuehren koennen - und zwar bevor der Wechsel
- * stattfindet. Wer bereits drin steht, wird ueber
- * {@link PlayerChangedWorldEvent} zurueckgeholt.
+ * <p>Alle relevanten Wege in eine deaktivierte Dimension werden abgefangen:
+ * normale Teleports, Portal-Teleports, Nether-Portale, End-Portale,
+ * End-Gateways, Respawns und das nachträgliche Erkennen eines Spielers
+ * in einer deaktivierten Welt.
  *
- * <p>Wichtig fuer Folia: der Handler laedt keine Chunks, erzeugt keine
- * Welt und ruft kein synchrones {@code teleport()} auf. Fuer das
- * Zurueckholen wird {@code teleportAsync()} benutzt - aber nie mitten im
- * Tick des Spielers. Genau das waere namens der Grund, warum das Portal-Event
- * hier gefährlich ist: {@code EntityPortalEnterEvent} feuert aus
- * {@code entityInside()} heraus, also noch innerhalb von
- * {@code applyEffectsFromBlocks()}. Ein Teleport an dieser Stelle setzt den
- * Spieler sofort auf {@code removed=CHANGED_DIMENSION}, der Tick laeuft aber
- * weiter bis {@code ServerPlayer.onInsideBlock()} und dort feuert
- * {@code EnterBlockTrigger} - ein Main-Thread-Criterion. Ergebnis auf Folia:
- * {@code ThreadViolationException} und der Spieler fliegt mit "Internal server
- * error" raus. Deshalb wird das Herausholen immer ueber den
- * Entity-Scheduler um einen Tick verschoben, wo der Tick sauber zu Ende
- * gelaufen ist.
+ * <p>Das Herausholen aus einem Portal wird auf Folia niemals direkt aus
+ * EntityPortalEnterEvent ausgeführt, sondern über den Entity-Scheduler
+ * verschoben.
  */
 public final class DimensionAccessListener extends EventListener {
 
-    /**
-     * Spieler, die gerade herausgeholt werden. Ohne diese Ausnahme wuerde
-     * der eigene Rettungsversuch am Teleport-Event scheitern und der Spieler
-     * bliebe in der gesperrten Dimension.
-     */
     private final Set<UUID> releasing = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Spieler, fuer die das Herausholen bereits fuer den naechsten Tick
-     * eingereiht ist. {@code EntityPortalEnterEvent} feuert jeden Tick neu,
-     * solange der Spieler im Portalblock steht - ohne diese Sperre wuerde
-     * fuer jeden Tick ein Task eingeplant.
-     *
-     * <p>Bewusst getrennt von {@link #releasing}: waehrend der Wartezeit
-     * soll der Spieler weiterhin als normaler Besucher gelten, damit
-     * {@link #onPlayerPortal(PlayerPortalEvent)} sein Portal abweist und die
-     * Rettung der einzige Ausgang bleibt.
-     */
     private final Set<UUID> releaseQueued = ConcurrentHashMap.newKeySet();
 
     private final DimensionManager manager;
@@ -75,45 +47,139 @@ public final class DimensionAccessListener extends EventListener {
         this.manager = manager;
     }
 
-    /**
-     * Befreit einen Spieler aus einer gesperrten Dimension. Wird benutzt,
-     * sobald eine Dimension deaktiviert wird, waehrend jemand noch drin ist.
-     */
-    public void release(Player player) {
-        if (player == null || !player.isOnline()) return;
+    private boolean isLocked(World world) {
+        return world != null && manager.isDisabled(world);
+    }
 
-        Location target = manager.fallbackSpawn();
-        if (target == null) return;
-
-        releasing.add(player.getUniqueId());
-
-        player.teleportAsync(target).whenComplete((result, throwable) ->
-                releasing.remove(player.getUniqueId()));
+    private boolean isLocked(Location location) {
+        return location != null && isLocked(location.getWorld());
     }
 
     /**
-     * Holt einen Spieler aus einer gesperrten Dimension, aber erst im
-     * naechsten Tick. Muss fuer alle Events benutzt werden, die mitten im
-     * Entity-Tick feuern - vor allem {@link #onPortalEnter(EntityPortalEnterEvent)}.
+     * Ermittelt die Vanilla-Zielwelt anhand des Portaltyps.
      *
-     * <p>Der Task laeuft ueber den Entity-Scheduler und damit auf dem
-     * Region-Thread des Spielers. Ein dort aufgerufenes {@code teleportAsync()}
-     * ist auf Folia ein regulaerer, erlaubter Vorgang.
+     * <p>PortalType enthält selbst keine World-Referenz. Die Zuordnung
+     * erfolgt deshalb anhand der World.Environment des Ausgangs.
      */
+    private World getWorldForPortalType(PortalType portalType, World sourceWorld) {
+        if (portalType == null || sourceWorld == null) {
+            return null;
+        }
+
+        return switch (portalType) {
+            case NETHER -> {
+                if (sourceWorld.getEnvironment() == World.Environment.NETHER) {
+                    yield findWorld(World.Environment.NORMAL);
+                }
+
+                yield findWorld(World.Environment.NETHER);
+            }
+
+            case ENDER -> {
+                if (sourceWorld.getEnvironment() == World.Environment.THE_END) {
+                    yield findWorld(World.Environment.NORMAL);
+                }
+
+                yield findWorld(World.Environment.THE_END);
+            }
+
+            default -> null;
+        };
+    }
+
+    private World findWorld(World.Environment environment) {
+        for (World world : Bukkit.getWorlds()) {
+            if (world.getEnvironment() == environment) {
+                return world;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Ermittelt bei PortalCreateEvent die relevante Zielwelt.
+     *
+     * <p>PortalCreateEvent besitzt keinen PortalType. Deshalb wird
+     * CreateReason verwendet.
+     */
+    private World getWorldForPortalCreate(PortalCreateEvent event) {
+        World sourceWorld = event.getWorld();
+
+        return switch (event.getReason()) {
+            case NETHER_PAIR -> {
+                if (sourceWorld.getEnvironment() == World.Environment.NETHER) {
+                    yield findWorld(World.Environment.NORMAL);
+                }
+
+                if (sourceWorld.getEnvironment() == World.Environment.NORMAL) {
+                    yield findWorld(World.Environment.NETHER);
+                }
+
+                yield null;
+            }
+
+            case END_PLATFORM -> findWorld(World.Environment.THE_END);
+
+            case FIRE -> null;
+        };
+    }
+
+    public void release(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+
+        Location target = manager.fallbackSpawn();
+
+        if (target == null || target.getWorld() == null) {
+            return;
+        }
+
+        if (isLocked(target.getWorld())) {
+            return;
+        }
+
+        UUID uuid = player.getUniqueId();
+
+        releasing.add(uuid);
+
+        player.teleportAsync(target).whenComplete((result, throwable) ->
+                releasing.remove(uuid)
+        );
+    }
+
     public void releaseLater(Player player) {
-        if (player == null || !player.isOnline()) return;
-        if (!releaseQueued.add(player.getUniqueId())) return;
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+
+        UUID uuid = player.getUniqueId();
+
+        if (!releaseQueued.add(uuid)) {
+            return;
+        }
 
         manager.server().scheduler().runEntity(player, () -> {
-            releaseQueued.remove(player.getUniqueId());
+            releaseQueued.remove(uuid);
+
+            if (!player.isOnline()) {
+                return;
+            }
+
+            if (!isLocked(player.getWorld())) {
+                return;
+            }
+
             release(player);
         });
     }
 
-    /**
-     * Raeumt die Merkmale auf, sonst bleiben UUIDs von Spielern zurueck, die
-     * sich mitten im Portalblock ausloggen.
-     */
+    public boolean isReleasing(Player player) {
+        return player != null
+                && releasing.contains(player.getUniqueId());
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -122,116 +188,153 @@ public final class DimensionAccessListener extends EventListener {
         releasing.remove(uuid);
     }
 
-    /** Darf dieser Spieler gerade geholt werden? */
-    public boolean isReleasing(Player player) {
-        return player != null && releasing.contains(player.getUniqueId());
-    }
-
-    private boolean isLocked(World world) {
-        return world != null && manager.isDisabled(world);
-    }
-
+    /**
+     * Normale Spieler-Teleports.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (isReleasing(player)) return;
 
-        if (isLocked(event.getTo().getWorld())) {
+        if (isReleasing(player)) {
+            return;
+        }
+
+        if (isLocked(event.getTo())) {
             event.setCancelled(true);
         }
     }
 
     /**
-     * Nicht-Spieler. EntityTeleportEvent und PlayerTeleportEvent sind
-     * getrennte Klassen, deshalb laeuft Spieler hier bewusst nicht mit
-     * durch - die Ausnahme wuerde sonst nur den eigenen Rettungsversuch
-     * aufhalten.
+     * Normale Entity-Teleports.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityTeleport(EntityTeleportEvent event) {
-        Entity entity = event.getEntity();
-        if (entity instanceof Player) return;
-
-        Location to = event.getTo();
-        if (to != null && isLocked(to.getWorld())) {
-            event.setCancelled(true);
+        if (event.getEntity() instanceof Player) {
+            return;
         }
-    }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerPortal(PlayerPortalEvent event) {
-        Player player = event.getPlayer();
-        if (isReleasing(player)) return;
-
-        if (isLocked(event.getFrom().getWorld()) || isLocked(event.getTo().getWorld())) {
-            event.setCancelled(true);
-        }
-    }
-
-    /** Portale fuer Nicht-Spieler. */
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onEntityPortal(EntityPortalEvent event) {
-        Entity entity = event.getEntity();
-        if (entity instanceof Player) return;
-
-        if (isLocked(event.getFrom().getWorld()) || isLocked(event.getTo().getWorld())) {
+        if (isLocked(event.getTo())) {
             event.setCancelled(true);
         }
     }
 
     /**
-     * Betreten eines Portalblocks. Das PortalEvent feuert erst beim
-     * tatsaechlichen Wechsel, hier ist also noch Zeit zu reagieren.
-     * EntityPortalEnterEvent ist nicht cancellable - der Weg wird deshalb
-     * ueber den naechsten Teleport abgeschnitten.
+     * Portal-Teleports von Spielern.
      */
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPortalEnter(EntityPortalEnterEvent event) {
-        if (!isLocked(event.getLocation().getWorld())) return;
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlayerPortal(PlayerPortalEvent event) {
+        Player player = event.getPlayer();
 
-        if (event.getEntity() instanceof Player player && !isReleasing(player)) {
+        if (isReleasing(player)) {
+            return;
+        }
+
+        if (isLocked(event.getFrom()) || isLocked(event.getTo())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Portal-Teleports von Nicht-Spieler-Entities.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityPortal(EntityPortalEvent event) {
+        if (event.getEntity() instanceof Player) {
+            return;
+        }
+
+        if (isLocked(event.getFrom()) || isLocked(event.getTo())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Moderne Portal-Erstellung.
+     *
+     * <p>PortalCreateEvent besitzt keinen PortalType. NETHER_PAIR und
+     * END_PLATFORM können aber anhand von CreateReason und World.Environment
+     * eindeutig behandelt werden.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPortalCreate(PortalCreateEvent event) {
+        World sourceWorld = event.getWorld();
+        World targetWorld = getWorldForPortalCreate(event);
+
+        if (isLocked(sourceWorld) || isLocked(targetWorld)) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Legacy-Event für Entity-generierte Portale.
+     *
+     * <p>Hier steht PortalType tatsächlich zur Verfügung.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @SuppressWarnings("deprecation")
+    public void onEntityCreatePortal(EntityCreatePortalEvent event) {
+        World sourceWorld = event.getEntity().getWorld();
+
+        World targetWorld = getWorldForPortalType(
+                event.getPortalType(),
+                sourceWorld
+        );
+
+        if (isLocked(sourceWorld) || isLocked(targetWorld)) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Spieler betritt einen Portalblock in einer deaktivierten Dimension.
+     *
+     * <p>Der Teleport wird bewusst um einen Tick verschoben, damit kein
+     * Teleport innerhalb des laufenden Entity-Ticks erfolgt.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPortalEnter(EntityPortalEnterEvent event) {
+        if (!isLocked(event.getLocation())) {
+            return;
+        }
+
+        if (event.getEntity() instanceof Player player
+                && !isReleasing(player)) {
             releaseLater(player);
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPortalCreate(PortalCreateEvent event) {
-        if (isLocked(event.getWorld())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onEntityCreatePortal(EntityCreatePortalEvent event) {
-        if (isLocked(event.getEntity().getWorld())) {
-            event.setCancelled(true);
-        }
-    }
-
     /**
-     * Bett oder Respawn-Anker in einer gesperrten Dimension.
-     * PlayerRespawnEvent ist nicht cancellable, deshalb wird einfach das
-     * Ziel umgeschrieben.
+     * Respawn in deaktivierter Dimension verhindern.
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onRespawn(PlayerRespawnEvent event) {
-        if (!isLocked(event.getRespawnLocation().getWorld())) return;
+        if (!isLocked(event.getRespawnLocation())) {
+            return;
+        }
 
         Location fallback = manager.fallbackSpawn();
-        if (fallback != null) {
+
+        if (fallback != null
+                && fallback.getWorld() != null
+                && !isLocked(fallback.getWorld())) {
             event.setRespawnLocation(fallback);
         }
     }
 
     /**
-     * Letztes Sicherheitsnetz: Wer dennoch in einer gesperrten Dimension
-     * landet - etwa weil die Dimension erst danach gesperrt wurde - wird
-     * hier zurueckgeholt.
+     * Sicherheitsnetz für Spieler, die bereits in einer deaktivierten
+     * Dimension angekommen sind.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChangedWorld(PlayerChangedWorldEvent event) {
-        if (!isLocked(event.getPlayer().getWorld())) return;
+        Player player = event.getPlayer();
 
-        releaseLater(event.getPlayer());
+        if (!isLocked(player.getWorld())) {
+            return;
+        }
+
+        if (!isReleasing(player)) {
+            releaseLater(player);
+        }
     }
 }

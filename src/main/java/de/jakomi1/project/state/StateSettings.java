@@ -1,9 +1,23 @@
 package de.jakomi1.project.state;
 
+import de.jakomi1.permission.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 public final class StateSettings {
+
+    /**
+     * Border-Durchmesser, solange der Server nicht laeuft. Der Wert ist
+     * bewusst winzig: wer im Zustand STOPPED oder OPEN auf die Welt kommt, ist
+     * auf den Spawn eingesperrt, bis der Start durch ist.
+     */
+    public static final double LOCKED_BORDER_SIZE = 20.0D;
+
+    /**
+     * Border-Durchmesser im laufenden Server. Wird erst gesetzt, wenn der
+     * Start-Countdown durchgelaufen ist.
+     */
+    public static final double RUNNING_BORDER_SIZE = 10000.0D;
 
     private final Component motd;
     private final Component subMotd;
@@ -30,30 +44,30 @@ public final class StateSettings {
     public static StateSettings defaults(ServerState state) {
         return switch (state) {
             case STOPPED -> builder()
-                    .join(StateRule.none())
+                    .join(StateRule.roles(Role.ADMIN, Role.OWNER))
                     .hidePlayers(true)
-                    .border(BorderSettings.of(100))
+                    .border(BorderSettings.of(LOCKED_BORDER_SIZE))
                     .subMotd(Component.text("Der Server ist derzeit gestoppt.", NamedTextColor.RED))
                     .kickMessage(Component.text("Der Server ist derzeit gestoppt.", NamedTextColor.RED))
-                    .build();
-
-            case STARTED -> builder()
-                    .join(StateRule.all())
-                    .hidePlayers(false)
-                    .border(BorderSettings.of(500))
-                    .subMotd(Component.text("Der Server startet gleich...", NamedTextColor.GREEN))
                     .build();
 
             case OPEN -> builder()
                     .join(StateRule.all())
                     .hidePlayers(false)
-                    .border(BorderSettings.of(8000))
+                    .border(BorderSettings.of(LOCKED_BORDER_SIZE))
+                    .subMotd(Component.text("Der Server startet bald...", NamedTextColor.YELLOW))
+                    .build();
+
+            case STARTED -> builder()
+                    .join(StateRule.all())
+                    .hidePlayers(false)
+                    .border(BorderSettings.of(RUNNING_BORDER_SIZE))
                     .build();
 
             case CLOSED -> builder()
-                    .join(StateRule.none())
+                    .join(StateRule.roles(Role.ADMIN, Role.OWNER))
                     .hidePlayers(true)
-                    .border(BorderSettings.of(1000))
+                    .border(BorderSettings.of(LOCKED_BORDER_SIZE))
                     .subMotd(Component.text("Der Server ist geschlossen.", NamedTextColor.RED))
                     .kickMessage(Component.text("Der Server ist geschlossen.", NamedTextColor.RED))
                     .build();
