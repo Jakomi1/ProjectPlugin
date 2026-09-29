@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityPortalEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.PortalCreateEvent;
@@ -33,7 +34,18 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Wichtig fuer Folia: der Handler laedt keine Chunks, erzeugt keine
  * Welt und ruft kein synchrones {@code teleport()} auf. Fuer das
- * Zurueckholen wird {@code teleportAsync()} benutzt.
+ * Zurueckholen wird {@code teleportAsync()} benutzt - aber nie mitten im
+ * Tick des Spielers. Genau das waere namens der Grund, warum das Portal-Event
+ * hier gefährlich ist: {@code EntityPortalEnterEvent} feuert aus
+ * {@code entityInside()} heraus, also noch innerhalb von
+ * {@code applyEffectsFromBlocks()}. Ein Teleport an dieser Stelle setzt den
+ * Spieler sofort auf {@code removed=CHANGED_DIMENSION}, der Tick laeuft aber
+ * weiter bis {@code ServerPlayer.onInsideBlock()} und dort feuert
+ * {@code EnterBlockTrigger} - ein Main-Thread-Criterion. Ergebnis auf Folia:
+ * {@code ThreadViolationException} und der Spieler fliegt mit "Internal server
+ * error" raus. Deshalb wird das Herausholen immer ueber den
+ * Entity-Scheduler um einen Tick verschoben, wo der Tick sauber zu Ende
+ * gelaufen ist.
  */
 public final class DimensionAccessListener extends EventListener {
 
@@ -43,6 +55,19 @@ public final class DimensionAccessListener extends EventListener {
      * bliebe in der gesperrten Dimension.
      */
     private final Set<UUID> releasing = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Spieler, fuer die das Herausholen bereits fuer den naechsten Tick
+     * eingereiht ist. {@code EntityPortalEnterEvent} feuert jeden Tick neu,
+     * solange der Spieler im Portalblock steht - ohne diese Sperre wuerde
+     * fuer jeden Tick ein Task eingeplant.
+     *
+     * <p>Bewusst getrennt von {@link #releasing}: waehrend der Wartezeit
+     * soll der Spieler weiterhin als normaler Besucher gelten, damit
+     * {@link #onPlayerPortal(PlayerPortalEvent)} sein Portal abweist und die
+     * Rettung der einzige Ausgang bleibt.
+     */
+    private final Set<UUID> releaseQueued = ConcurrentHashMap.newKeySet();
 
     private final DimensionManager manager;
 
@@ -64,6 +89,37 @@ public final class DimensionAccessListener extends EventListener {
 
         player.teleportAsync(target).whenComplete((result, throwable) ->
                 releasing.remove(player.getUniqueId()));
+    }
+
+    /**
+     * Holt einen Spieler aus einer gesperrten Dimension, aber erst im
+     * naechsten Tick. Muss fuer alle Events benutzt werden, die mitten im
+     * Entity-Tick feuern - vor allem {@link #onPortalEnter(EntityPortalEnterEvent)}.
+     *
+     * <p>Der Task laeuft ueber den Entity-Scheduler und damit auf dem
+     * Region-Thread des Spielers. Ein dort aufgerufenes {@code teleportAsync()}
+     * ist auf Folia ein regulaerer, erlaubter Vorgang.
+     */
+    public void releaseLater(Player player) {
+        if (player == null || !player.isOnline()) return;
+        if (!releaseQueued.add(player.getUniqueId())) return;
+
+        manager.server().scheduler().runEntity(player, () -> {
+            releaseQueued.remove(player.getUniqueId());
+            release(player);
+        });
+    }
+
+    /**
+     * Raeumt die Merkmale auf, sonst bleiben UUIDs von Spielern zurueck, die
+     * sich mitten im Portalblock ausloggen.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onQuit(PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+
+        releaseQueued.remove(uuid);
+        releasing.remove(uuid);
     }
 
     /** Darf dieser Spieler gerade geholt werden? */
@@ -134,7 +190,7 @@ public final class DimensionAccessListener extends EventListener {
         if (!isLocked(event.getLocation().getWorld())) return;
 
         if (event.getEntity() instanceof Player player && !isReleasing(player)) {
-            release(player);
+            releaseLater(player);
         }
     }
 
@@ -176,6 +232,6 @@ public final class DimensionAccessListener extends EventListener {
     public void onChangedWorld(PlayerChangedWorldEvent event) {
         if (!isLocked(event.getPlayer().getWorld())) return;
 
-        release(event.getPlayer());
+        releaseLater(event.getPlayer());
     }
 }
