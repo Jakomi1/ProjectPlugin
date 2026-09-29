@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 public final class CombatListener extends EventListener {
 
@@ -27,6 +28,11 @@ public final class CombatListener extends EventListener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         combat.refresh(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        combat.handleQuit(event.getPlayer());
     }
 
     private Player resolveAttacker(org.bukkit.entity.Entity damager) {

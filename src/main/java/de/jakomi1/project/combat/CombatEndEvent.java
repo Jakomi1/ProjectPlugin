@@ -10,7 +10,8 @@ public final class CombatEndEvent extends Event implements Cancellable {
     public enum Reason {
         EXPIRED,
         REMOVED,
-        DISABLED
+        DISABLED,
+        COMBAT_LOG
     }
 
     private static final HandlerList HANDLERS = new HandlerList();

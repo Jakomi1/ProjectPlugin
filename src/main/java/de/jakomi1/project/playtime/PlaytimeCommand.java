@@ -4,18 +4,27 @@ import de.jakomi1.command.CustomCommand;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
+/**
+ * Zeigt die Spielzeit eines Spielers an.
+ *
+ * <p>Ohne Argument wird die eigene Zeit angezeigt. Die Tab-Vorschlaege
+ * kommen aus der persistenten Tabelle und enthalten damit jeden Spieler, der
+ * den Server schon einmal besucht hat - auch wenn er gerade offline ist.
+ * Eine Abfrage von {@code getOfflinePlayers()} waere hier nicht nur langsam,
+ * sie wuerde zudem bei jedem Tastendruck die Spielerdatendatei laden.
+ */
 public final class PlaytimeCommand implements CustomCommand {
+
+    private static final int SUGGESTION_LIMIT = 60;
 
     private final PlaytimeManager manager;
 
@@ -39,66 +48,75 @@ public final class PlaytimeCommand implements CustomCommand {
     }
 
     @Override
+    public String permission() {
+        return "";
+    }
+
+    @Override
     public List<String> aliases() {
         return List.of("playt", "ptime");
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        OfflinePlayer target;
-        boolean selfQuery = false;
-
+    public boolean onCommand(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String label,
+            @NotNull String[] args
+    ) {
         if (args.length == 0) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage(prefix().append(Component.text("Bitte gib einen Spielernamen an!", NamedTextColor.RED)));
+                sender.sendMessage(prefix().append(
+                        Component.text("Bitte gib einen Spielernamen an!", NamedTextColor.RED)));
                 return true;
             }
 
-            target = player;
-            selfQuery = true;
-        } else {
-            target = Bukkit.getOfflinePlayer(args[0]);
-
-            if (!target.hasPlayedBefore() && !target.isOnline()) {
-                sender.sendMessage(prefix().append(Component.text(
-                        "Spieler \"" + args[0] + "\" nicht gefunden.",
-                        NamedTextColor.RED
-                )));
-                return true;
-            }
+            sender.sendMessage(result("Deine Spielzeit: ", player.getName()));
+            return true;
         }
 
-        String playerName = target.getName() != null ? target.getName() : "Unbekannt";
+        String query = args[0];
 
-        sender.sendMessage(prefix().append(Component.text(
-                        selfQuery ? "Deine Spielzeit: " : playerName + "'s Spielzeit: ",
-                        NamedTextColor.GRAY
-                )
-                .decoration(TextDecoration.BOLD, false)
-                .append(Component.text(
-                        PlaytimeManager.format(manager.playtime(target)),
-                        NamedTextColor.AQUA
-                ))));
+        if (!PlaytimeStore.isKnown(query)) {
+            sender.sendMessage(prefix().append(Component.text(
+                    "Spieler \"" + query + "\" wurde auf diesem Server noch nicht gesehen.",
+                    NamedTextColor.RED
+            )));
+            return true;
+        }
+
+        String name = PlaytimeStore.nameOf(query);
+
+        sender.sendMessage(result(name + "'s Spielzeit: ", name));
 
         return true;
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (args.length == 1) {
-            if (!(sender instanceof Player player) || !manager.canViewPlaytime(player)) {
-                return List.of();
-            }
+    public @Nullable List<String> onTabComplete(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String label,
+            @NotNull String[] args
+    ) {
+        if (args.length != 1) return List.of();
 
-            String prefix = args[0].toLowerCase();
+        String prefix = args[0].toLowerCase(Locale.ROOT);
+        if (prefix.isEmpty()) return List.of();
 
-            return Arrays.stream(Bukkit.getOfflinePlayers())
-                    .map(OfflinePlayer::getName)
-                    .filter(name -> name != null && name.toLowerCase().startsWith(prefix))
-                    .toList();
-        }
+        return PlaytimeStore.knownNames().stream()
+                .filter(candidate -> candidate.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .limit(SUGGESTION_LIMIT)
+                .toList();
+    }
 
-        return List.of();
+    private Component result(String label, String name) {
+        return prefix().append(
+                Component.text(label, NamedTextColor.GRAY)
+                        .decoration(TextDecoration.BOLD, false)
+                        .append(Component.text(PlaytimeStore.format(PlaytimeStore.seconds(name)),
+                                NamedTextColor.AQUA))
+        );
     }
 
     private Component prefix() {

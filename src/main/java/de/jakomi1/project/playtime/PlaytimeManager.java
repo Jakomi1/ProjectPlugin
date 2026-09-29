@@ -3,26 +3,32 @@ package de.jakomi1.project.playtime;
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.permission.Role;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Statistic;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Spielzeit-Verwaltung.
+ *
+ * <p>Ein {@code enable()} reicht vollstaendig aus: Tabelle, laufende
+ * Speicherung, Top-Snapshot und die beiden Befehle werden dabei zusammen
+ * eingerichtet. Ein {@link PlaytimeStore#disable()} von Hand ist nicht
+ * noetig, das uebernimmt {@link #disable()}.
+ */
 public final class PlaytimeManager implements Manager {
 
     private final ProjectServer server;
+    private final PlaytimeTable table;
     private final PlaytimeCommand playtimeCommand;
     private final TopTenCommand topTenCommand;
 
     private boolean enabled;
+    private boolean tableRegistered;
     private boolean registerCommand = true;
     private Role minimumRole = Role.MODERATOR;
 
     public PlaytimeManager(ProjectServer server) {
         this.server = server;
+        this.table = new PlaytimeTable();
         this.playtimeCommand = new PlaytimeCommand(this);
         this.topTenCommand = new TopTenCommand(this);
     }
@@ -32,10 +38,15 @@ public final class PlaytimeManager implements Manager {
         if (enabled) return this;
         enabled = true;
 
+        playtimeTable();
+
         if (registerCommand) {
             playtimeCommand.register(server.plugin());
             topTenCommand.register(server.plugin());
         }
+
+        PlaytimeStore.enable(server, playtimeTable());
+
         return this;
     }
 
@@ -43,11 +54,19 @@ public final class PlaytimeManager implements Manager {
     public void disable() {
         if (!enabled) return;
         enabled = false;
+
+        PlaytimeStore.disable();
     }
 
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /** Merkt sich einen Spieler, damit seine Zeit auch offline stimmt. */
+    public PlaytimeManager track(org.bukkit.entity.Player player) {
+        PlaytimeStore.track(player);
+        return this;
     }
 
     public PlaytimeManager command(boolean registerCommand) {
@@ -68,53 +87,50 @@ public final class PlaytimeManager implements Manager {
         return minimumRole;
     }
 
-    public int playtimeTicks(OfflinePlayer player) {
+    public int playtimeTicks(org.bukkit.OfflinePlayer player) {
         if (player == null) return 0;
 
         try {
-            return player.getStatistic(Statistic.TOTAL_WORLD_TIME);
+            return player.getStatistic(org.bukkit.Statistic.TOTAL_WORLD_TIME);
         } catch (Exception ignored) {
             return 0;
         }
     }
 
-    public long playtime(OfflinePlayer player) {
+    public long playtime(org.bukkit.OfflinePlayer player) {
         return playtimeTicks(player) / 20L;
     }
 
-    public boolean canViewPlaytime(OfflinePlayer player) {
+    public boolean canViewPlaytime(org.bukkit.OfflinePlayer player) {
         return player != null && player.isOnline()
                 && server.permissions().roleOf(player.getUniqueId()).inherits(minimumRole);
     }
 
-    public List<PlaytimeEntry> top(int limit) {
-        int max = Math.max(1, limit);
+    public List<PlaytimeTable.PlaytimeEntry> top(int limit) {
+        return PlaytimeStore.top(limit);
+    }
 
-        return Arrays.stream(Bukkit.getOfflinePlayers())
-                .map(player -> new PlaytimeEntry(
-                        player.getName() != null ? player.getName() : "Unbekannt",
-                        playtime(player)
-                ))
-                .filter(entry -> entry.seconds() > 0)
-                .sorted(Comparator.comparingLong(PlaytimeEntry::seconds).reversed())
-                .limit(max)
-                .toList();
+    public List<String> knownNames() {
+        return PlaytimeStore.knownNames();
     }
 
     public static String format(long seconds) {
-        long days = seconds / 86400;
-        long hours = (seconds % 86400) / 3600;
-        long minutes = (seconds % 3600) / 60;
+        return PlaytimeStore.format(seconds);
+    }
 
-        return days > 0
-                ? "%dd %dh %02dmin".formatted(days, hours, minutes)
-                : "%dh %02dmin".formatted(hours, minutes);
+    public PlaytimeTable table() {
+        return playtimeTable();
     }
 
     public ProjectServer server() {
         return server;
     }
 
-    public record PlaytimeEntry(String name, long seconds) {
+    private PlaytimeTable playtimeTable() {
+        if (!tableRegistered) {
+            table.register(server.plugin());
+            tableRegistered = true;
+        }
+        return table;
     }
 }

@@ -4,13 +4,17 @@ import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.scheduler.Scheduler;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 public final class CombatManager implements Manager {
 
@@ -24,6 +28,7 @@ public final class CombatManager implements Manager {
     private boolean enabled;
     private long durationMs = DEFAULT_DURATION_MS;
     private Scheduler.Task expiryTask;
+    private Predicate<Player> combatLogBan = player -> false;
 
     public CombatManager(ProjectServer server) {
         this.server = server;
@@ -74,6 +79,15 @@ public final class CombatManager implements Manager {
 
     public long durationMillis() {
         return durationMs;
+    }
+
+    public CombatManager combatLogBan(Predicate<Player> predicate) {
+        this.combatLogBan = predicate == null ? player -> false : predicate;
+        return this;
+    }
+
+    public boolean combatLogBans(Player player) {
+        return combatLogBan.test(player);
     }
 
     public CombatManager mark(Player player) {
@@ -149,6 +163,45 @@ public final class CombatManager implements Manager {
             } else {
                 combatUntil.remove(uuid);
             }
+        }
+    }
+
+    public void handleQuit(Player player) {
+        if (player == null || !enabled) return;
+        if (!isInCombat(player)) return;
+
+        combatUntil.remove(player.getUniqueId());
+        Bukkit.getPluginManager().callEvent(new CombatEndEvent(player, CombatEndEvent.Reason.COMBAT_LOG));
+
+        if (combatLogBan.test(player)) {
+            dropInventory(player);
+        }
+    }
+
+    private void dropInventory(Player player) {
+        Location location = player.getLocation();
+        World world = location.getWorld();
+        if (world == null) return;
+
+        ItemStack[] contents = player.getInventory().getContents();
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        ItemStack[] extra = player.getInventory().getExtraContents();
+
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(new ItemStack[armor.length]);
+        player.getInventory().setExtraContents(new ItemStack[extra.length]);
+
+        server.scheduler().runRegion(location, () -> {
+            dropAll(world, location, contents);
+            dropAll(world, location, armor);
+            dropAll(world, location, extra);
+        });
+    }
+
+    private void dropAll(World world, Location location, ItemStack[] items) {
+        for (ItemStack item : items) {
+            if (item == null || item.getType().isAir()) continue;
+            world.dropItemNaturally(location, item);
         }
     }
 

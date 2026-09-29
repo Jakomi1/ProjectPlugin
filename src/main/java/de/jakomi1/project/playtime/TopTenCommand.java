@@ -11,7 +11,17 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+/**
+ * Zeigt die zehn Spieler mit der meisten Spielzeit.
+ *
+ * <p>Die Liste kommt aus einem fertigen Snapshot, der im Hintergrund
+ * erneuert wird. Der Command selbst sortiert nichts und liest keine Datei
+ * ein - frueher wurde fuer jeden bekannten Spieler die Spielerdatendatei
+ * geladen, was bei vielen Spielern spuerbar laggte.
+ */
 public final class TopTenCommand implements CustomCommand {
+
+    private static final int LIMIT = 10;
 
     private final PlaytimeManager manager;
 
@@ -30,35 +40,55 @@ public final class TopTenCommand implements CustomCommand {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        List<PlaytimeManager.PlaytimeEntry> top = manager.top(10);
+    public String usage() {
+        return "/topten";
+    }
+
+    @Override
+    public String permission() {
+        return "";
+    }
+
+    @Override
+    public boolean onCommand(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String label,
+            @NotNull String[] args
+    ) {
+        List<PlaytimeTable.PlaytimeEntry> top = PlaytimeStore.top(LIMIT);
 
         if (top.isEmpty()) {
-            sender.sendMessage(prefix().append(Component.text("Keine Daten zur Spielzeit vorhanden.", NamedTextColor.GRAY)));
+            sender.sendMessage(prefix().append(
+                    Component.text("Es sind noch keine Spielzeiten erfasst.", NamedTextColor.GRAY)));
             return true;
         }
 
-        sender.sendMessage(prefix().append(Component.text("Top 10 Spieler:", NamedTextColor.GRAY)
-                .decoration(TextDecoration.BOLD, false)));
+        sender.sendMessage(prefix().append(
+                Component.text("Top %d Spieler:".formatted(LIMIT), NamedTextColor.GRAY)
+                        .decoration(TextDecoration.BOLD, false)
+        ));
 
         for (int i = 0; i < top.size(); i++) {
-            sender.sendMessage(formatEntry(i + 1, top.get(i)));
+            PlaytimeTable.PlaytimeEntry entry = top.get(i);
+
+            sender.sendMessage(
+                    Component.text(">> %d %s - ".formatted(i + 1, entry.name()), NamedTextColor.GRAY)
+                            .append(Component.text(PlaytimeStore.format(entry.seconds()), NamedTextColor.AQUA))
+            );
         }
 
         return true;
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public @Nullable List<String> onTabComplete(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String label,
+            @NotNull String[] args
+    ) {
         return List.of();
-    }
-
-    private Component formatEntry(int position, PlaytimeManager.PlaytimeEntry entry) {
-        return Component.text(">> %d %s - ".formatted(position, entry.name()), NamedTextColor.GRAY)
-                .append(Component.text(
-                        PlaytimeManager.format(entry.seconds()),
-                        NamedTextColor.AQUA
-                ));
     }
 
     private Component prefix() {
