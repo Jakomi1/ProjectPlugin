@@ -3,8 +3,8 @@ package de.jakomi1.dimension;
 import de.jakomi1.listener.EventListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.PortalType;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -29,12 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Alle relevanten Wege in eine deaktivierte Dimension werden abgefangen:
  * normale Teleports, Portal-Teleports, Nether-Portale, End-Portale,
- * End-Gateways, Respawns und das nachträgliche Erkennen eines Spielers
+ * End-Gateways, Respawns und das nachtraegliche Erkennen eines Spielers
  * in einer deaktivierten Welt.
  *
- * <p>Das Herausholen aus einem Portal wird auf Folia niemals direkt aus
- * EntityPortalEnterEvent ausgeführt, sondern über den Entity-Scheduler
- * verschoben.
+ * <p>Beim Betreten eines Portals wird das Event direkt abgebrochen, statt zu
+ * teleportieren. Dadurch kommt der Spieler nie kurz in die gesperrte
+ * Dimension und es gibt keinen Teleport mitten im Entity-Tick.
  */
 public final class DimensionAccessListener extends EventListener {
 
@@ -53,38 +53,6 @@ public final class DimensionAccessListener extends EventListener {
 
     private boolean isLocked(Location location) {
         return location != null && isLocked(location.getWorld());
-    }
-
-    /**
-     * Ermittelt die Vanilla-Zielwelt anhand des Portaltyps.
-     *
-     * <p>PortalType enthält selbst keine World-Referenz. Die Zuordnung
-     * erfolgt deshalb anhand der World.Environment des Ausgangs.
-     */
-    private World getWorldForPortalType(PortalType portalType, World sourceWorld) {
-        if (portalType == null || sourceWorld == null) {
-            return null;
-        }
-
-        return switch (portalType) {
-            case NETHER -> {
-                if (sourceWorld.getEnvironment() == World.Environment.NETHER) {
-                    yield findWorld(World.Environment.NORMAL);
-                }
-
-                yield findWorld(World.Environment.NETHER);
-            }
-
-            case ENDER -> {
-                if (sourceWorld.getEnvironment() == World.Environment.THE_END) {
-                    yield findWorld(World.Environment.NORMAL);
-                }
-
-                yield findWorld(World.Environment.THE_END);
-            }
-
-            default -> null;
-        };
     }
 
     private World findWorld(World.Environment environment) {
@@ -268,39 +236,41 @@ public final class DimensionAccessListener extends EventListener {
     /**
      * Legacy-Event für Entity-generierte Portale.
      *
-     * <p>Hier steht PortalType tatsächlich zur Verfügung.
+     * <p>Hier steht der PortalType zur Verfuegung und wird direkt in die Art
+     * der Zieldimension umgewandelt - ohne ueber die Ausgangswelt zu raten.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     @SuppressWarnings("deprecation")
     public void onEntityCreatePortal(EntityCreatePortalEvent event) {
-        World sourceWorld = event.getEntity().getWorld();
+        Environment target = DimensionManager.targetEnvironment(event.getPortalType());
 
-        World targetWorld = getWorldForPortalType(
-                event.getPortalType(),
-                sourceWorld
-        );
-
-        if (isLocked(sourceWorld) || isLocked(targetWorld)) {
+        if (isLocked(event.getEntity().getWorld()) || manager.isDisabled(target)) {
             event.setCancelled(true);
         }
     }
 
     /**
-     * Spieler betritt einen Portalblock in einer deaktivierten Dimension.
+     * Spieler betritt einen Portalblock, der in eine gesperrte Dimension
+     * fuehren wuerde.
      *
-     * <p>Der Teleport wird bewusst um einen Tick verschoben, damit kein
-     * Teleport innerhalb des laufenden Entity-Ticks erfolgt.
+     * <p>Hier wird das Event direkt abgebrochen. EntityPortalEnterEvent ist im
+     * Canvas-Build Cancellable, deshalb wird gar nicht erst teleportiert. Damit
+     * entfallen drei Probleme auf einmal: es gibt keinen Teleport mitten im
+     * laufenden Entity-Tick (Folia), der Spieler ist nie kurz in der
+     * gesperrten Dimension (kein unerwuenschtes Achievement) und das Portal
+     * laeuft ins Leere.
+     *
+     * <p>LOWEST, damit der Abbruch vor allen anderen Plugins greift.
      */
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPortalEnter(EntityPortalEnterEvent event) {
-        if (!isLocked(event.getLocation())) {
+        Environment target = DimensionManager.targetEnvironment(event.getPortalType());
+
+        if (!manager.isDisabled(target)) {
             return;
         }
 
-        if (event.getEntity() instanceof Player player
-                && !isReleasing(player)) {
-            releaseLater(player);
-        }
+        event.setCancelled(true);
     }
 
     /**

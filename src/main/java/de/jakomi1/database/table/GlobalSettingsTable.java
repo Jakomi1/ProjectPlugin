@@ -3,9 +3,14 @@ package de.jakomi1.database.table;
 import de.jakomi1.database.KeyValueTable;
 import de.jakomi1.project.state.ServerState;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 public final class GlobalSettingsTable extends KeyValueTable<String, String> {
 
     private static final String SERVER_STATE_KEY = "server_state";
+    private static final String DISABLED_DIMENSIONS_KEY = "disabled_dimensions";
 
     public GlobalSettingsTable() {
         super("global_settings_table", String.class, String.class);
@@ -29,6 +34,33 @@ public final class GlobalSettingsTable extends KeyValueTable<String, String> {
 
     public void advanceServerState() {
         setServerState(getServerState().next());
+    }
+
+    /**
+     * Gesperrte Dimensionen. Wird als kommaseparierte Liste in einer Zeile
+     * abgelegt, damit der Sperrzustand einen Server-Neustart ueberlebt.
+     */
+    public Set<String> getDisabledDimensions() {
+        Set<String> dimensions = new LinkedHashSet<>();
+
+        for (String entry : getString(DISABLED_DIMENSIONS_KEY, "").split(",")) {
+            String trimmed = entry.trim();
+
+            if (!trimmed.isEmpty()) {
+                dimensions.add(trimmed);
+            }
+        }
+
+        return dimensions;
+    }
+
+    public void setDisabledDimensions(Collection<String> dimensions) {
+        if (dimensions == null || dimensions.isEmpty()) {
+            setString(DISABLED_DIMENSIONS_KEY, "");
+            return;
+        }
+
+        setString(DISABLED_DIMENSIONS_KEY, String.join(",", new LinkedHashSet<>(dimensions)));
     }
 
     public void ensureInt(String key, int value) {

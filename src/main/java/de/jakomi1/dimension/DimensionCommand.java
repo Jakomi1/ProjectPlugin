@@ -5,6 +5,7 @@ import de.jakomi1.project.ProjectServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -15,12 +16,21 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 public final class DimensionCommand implements CustomCommand {
 
     private static final String SUB_TELEPORT = "teleport";
     private static final String SUB_ENABLE = "enable";
     private static final String SUB_DISABLE = "disable";
+    private static final String SUB_LIST = "list";
+
+    private static final String[] VANILLA_DIMENSIONS = {
+            "minecraft:overworld",
+            "minecraft:the_nether",
+            "minecraft:the_end"
+    };
 
     private final DimensionManager manager;
     private final ProjectServer server;
@@ -43,7 +53,8 @@ public final class DimensionCommand implements CustomCommand {
     @Override
     public String usage() {
         return "/dimension " + SUB_TELEPORT + " <dimension> <player> <x> <y> <z> | /dimension "
-                + SUB_ENABLE + " <dimension> | /dimension " + SUB_DISABLE + " <dimension>";
+                + SUB_ENABLE + " <dimension> | /dimension " + SUB_DISABLE + " <dimension> | /dimension "
+                + SUB_LIST;
     }
 
     @Override
@@ -78,6 +89,7 @@ public final class DimensionCommand implements CustomCommand {
             case SUB_TELEPORT -> handleTeleport(sender, args);
             case SUB_ENABLE -> handleToggle(sender, args, true);
             case SUB_DISABLE -> handleToggle(sender, args, false);
+            case SUB_LIST -> handleList(sender);
             default -> {
                 sender.sendMessage(prefix().append(
                         Component.text("Unbekannter Unterbefehl '" + args[0] + "'. Nutze: " + usage(),
@@ -85,6 +97,57 @@ public final class DimensionCommand implements CustomCommand {
                 yield true;
             }
         };
+    }
+
+    /**
+     * Listet alle bekannten Dimensionen mit ihrem Sperrstatus auf.
+     *
+     * <p>Gesperrte Dimensionen stehen mit dabei, auch wenn sie gar nicht erst
+     * geladen sind - nur so sieht man, was nach einem Neustart noch zu ist.
+     */
+    private boolean handleList(CommandSender sender) {
+        Map<String, Boolean> entries = new TreeMap<>();
+
+        for (String id : manager.keys()) {
+            entries.put(id, manager.isDisabled(id));
+        }
+
+        for (String id : VANILLA_DIMENSIONS) {
+            entries.put(id, manager.isDisabled(id));
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            entries.putIfAbsent(world.getKey().asString(), manager.isDisabled(world));
+        }
+
+        if (entries.isEmpty()) {
+            sender.sendMessage(prefix().append(
+                    Component.text("Keine Dimensionen bekannt.", NamedTextColor.GRAY)));
+            return true;
+        }
+
+        int locked = 0;
+
+        for (Map.Entry<String, Boolean> entry : entries.entrySet()) {
+            boolean isLocked = entry.getValue();
+
+            if (isLocked) {
+                locked++;
+            }
+
+            sender.sendMessage(Component.text(" • ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text(entry.getKey(),
+                            isLocked ? NamedTextColor.RED : NamedTextColor.GREEN))
+                    .append(Component.text(isLocked ? " (gesperrt)" : " (frei)",
+                            NamedTextColor.GRAY)));
+        }
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(prefix().append(Component.text(
+                locked + " gesperrt, " + (entries.size() - locked) + " frei",
+                locked > 0 ? NamedTextColor.RED : NamedTextColor.GREEN)));
+
+        return true;
     }
 
     private boolean handleTeleport(CommandSender sender, String[] args) {
@@ -182,7 +245,7 @@ public final class DimensionCommand implements CustomCommand {
         } else {
             if (changed) {
                 sender.sendMessage(prefix().append(Component.text(
-                        "Die Dimension '" + dimension + "' ist jetzt gesperrt. Niemand kann sie betreten.",
+                        "Die Dimension '" + dimension + "' ist jetzt gesperrt.",
                         NamedTextColor.RED)));
             } else {
                 sender.sendMessage(prefix().append(Component.text(
@@ -201,7 +264,7 @@ public final class DimensionCommand implements CustomCommand {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            return List.of(SUB_TELEPORT, SUB_ENABLE, SUB_DISABLE);
+            return List.of(SUB_TELEPORT, SUB_ENABLE, SUB_DISABLE, SUB_LIST);
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -228,9 +291,7 @@ public final class DimensionCommand implements CustomCommand {
 
     private List<String> dimensionSuggestions() {
         List<String> suggestions = new ArrayList<>(manager.keys());
-        suggestions.add("minecraft:overworld");
-        suggestions.add("minecraft:the_nether");
-        suggestions.add("minecraft:the_end");
+        suggestions.addAll(List.of(VANILLA_DIMENSIONS));
         return suggestions;
     }
 

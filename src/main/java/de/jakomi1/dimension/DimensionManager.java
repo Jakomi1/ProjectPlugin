@@ -1,11 +1,13 @@
 package de.jakomi1.dimension;
 
+import de.jakomi1.database.table.GlobalSettingsTable;
 import de.jakomi1.datapack.ManagedDatapack;
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
@@ -31,6 +33,7 @@ public final class DimensionManager implements Manager {
     private static final String VANILLA_THE_END = "minecraft:the_end";
 
     private final ProjectServer server;
+    private final GlobalSettingsTable settingsTable;
     private final Map<String, DimensionDefinition> dimensions = new LinkedHashMap<>();
 
     /**
@@ -52,8 +55,9 @@ public final class DimensionManager implements Manager {
 
     private boolean enabled;
 
-    public DimensionManager(ProjectServer server) {
+    public DimensionManager(ProjectServer server, GlobalSettingsTable settingsTable) {
         this.server = server;
+        this.settingsTable = settingsTable;
         this.command = new DimensionCommand(this);
         this.accessListener = new DimensionAccessListener(this);
     }
@@ -62,6 +66,10 @@ public final class DimensionManager implements Manager {
     public DimensionManager enable() {
         if (enabled) return this;
         enabled = true;
+
+        // Sperrzustand zuerst laden, damit der Listener von Anfang an mit
+        // dem richtigen Zustand laeuft.
+        disabled.addAll(settingsTable.getDisabledDimensions());
 
         accessListener.register(server.plugin());
 
@@ -101,6 +109,7 @@ public final class DimensionManager implements Manager {
 
         if (!disabled.add(key)) return false;
 
+        persist();
         evictPlayers(key);
         return true;
     }
@@ -117,7 +126,10 @@ public final class DimensionManager implements Manager {
         String key = canonical(id);
         if (key == null) return false;
 
-        return disabled.remove(key);
+        if (!disabled.remove(key)) return false;
+
+        persist();
+        return true;
     }
 
     public boolean isDisabled(String id) {
@@ -136,8 +148,49 @@ public final class DimensionManager implements Manager {
         return location != null && isDisabled(location.getWorld());
     }
 
+    /**
+     * Prueft, ob irgendeine geladene Welt dieses Typs gesperrt ist.
+     *
+     * <p>Bei Portalen gibt es keine konkrete Zielwelt, sondern nur den Typ.
+     * Gesperrt heisst deshalb: es existiert eine geladene Welt des passenden
+     * Typs, die gesperrt ist.
+     */
+    public boolean isDisabled(Environment environment) {
+        if (environment == null) return false;
+
+        for (World world : Bukkit.getWorlds()) {
+            if (world.getEnvironment() == environment && isDisabled(world)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Wandelt einen Bukkit-Portaltyp direkt in die Art der Zieldimension um.
+     *
+     * <p>{@code END_GATEWAY} landet ebenfalls im End. {@code CUSTOM} kennt
+     * kein Ziel und liefert deshalb {@code null}, damit nichts faelschlich
+     * gesperrt wird.
+     */
+    public static Environment targetEnvironment(PortalType type) {
+        if (type == null) return null;
+
+        return switch (type) {
+            case NETHER -> Environment.NETHER;
+            case ENDER, END_GATEWAY -> Environment.THE_END;
+            case CUSTOM -> null;
+        };
+    }
+
     public Set<String> disabledDimensions() {
         return Set.copyOf(disabled);
+    }
+
+    /** Schreibt den Sperrzustand in die Datenbank, damit er Neustarts ueberlebt. */
+    private void persist() {
+        settingsTable.setDisabledDimensions(disabled);
     }
 
     public DimensionAccessListener accessListener() {
@@ -175,21 +228,17 @@ public final class DimensionManager implements Manager {
 
     /**
      * Bringt eine ID auf die kanonische Form. Vanilla-Namen werden auf ihre
-     * Namespaced-Form gebracht, damit Schreibweise keine Rolle spielt.
+     * Namespaced-Form gebracht, damit die Schreibweise keine Rolle spielt.
      */
     private String canonical(String id) {
         if (id == null || id.isBlank()) return null;
 
-        String trimmed = id.trim();
-
-        if (trimmed.equalsIgnoreCase("overworld")
-                || trimmed.equalsIgnoreCase("the_nether")
-                || trimmed.equalsIgnoreCase("the_end")) {
-            return VANILLA_OVERWORLD.equalsIgnoreCase(trimmed) ? VANILLA_OVERWORLD
-                    : trimmed.equalsIgnoreCase("the_nether") ? VANILLA_THE_NETHER : VANILLA_THE_END;
-        }
-
-        return trimmed.toLowerCase(Locale.ROOT);
+        return switch (id.trim().toLowerCase(Locale.ROOT)) {
+            case "overworld", VANILLA_OVERWORLD -> VANILLA_OVERWORLD;
+            case "the_nether", VANILLA_THE_NETHER -> VANILLA_THE_NETHER;
+            case "the_end", VANILLA_THE_END -> VANILLA_THE_END;
+            default -> id.trim().toLowerCase(Locale.ROOT);
+        };
     }
 
     public DimensionManager namespace(String namespace) {

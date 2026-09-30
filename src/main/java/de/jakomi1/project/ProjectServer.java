@@ -90,7 +90,7 @@ public class ProjectServer {
         this.combatManager = new CombatManager(this);
 
         this.biomeManager = new BiomeManager(this);
-        this.dimensionManager = new DimensionManager(this);
+        this.dimensionManager = new DimensionManager(this, globalSettings);
 
         this.whitelistManager = new WhitelistManager(this);
         this.scoreboardManager = new ScoreboardManager(this);
