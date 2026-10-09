@@ -261,16 +261,19 @@ public final class DimensionAccessListener extends EventListener {
      * laeuft ins Leere.
      *
      * <p>LOWEST, damit der Abbruch vor allen anderen Plugins greift.
+     *
+     * <p>Es wird doppelt geprueft: der Portalblock selbst liegt in einer
+     * gesperrten Welt ODER das Ziel fuehrt in eine deaktivierte Dimension.
+     * Die reine Ziel-Pruefung (9f288af) machte bestehende Portale in der
+     * gesperrten Spawn-Welt trotzdem wieder benutzbar.
      */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPortalEnter(EntityPortalEnterEvent event) {
         Environment target = DimensionManager.targetEnvironment(event.getPortalType());
 
-        if (!manager.isDisabled(target)) {
-            return;
+        if (isLocked(event.getLocation()) || manager.isDisabled(target)) {
+            event.setCancelled(true);
         }
-
-        event.setCancelled(true);
     }
 
     /**
