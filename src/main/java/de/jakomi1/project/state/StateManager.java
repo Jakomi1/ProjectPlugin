@@ -13,7 +13,9 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,6 +37,10 @@ public final class StateManager {
     private final AtomicBoolean starting = new AtomicBoolean(false);
     private volatile Scheduler.Task startCountdownTask;
 
+    private String commandName;
+    private String commandPermission;
+    private List<String> commandAliases = List.of();
+
     public StateManager(ProjectServer server, GlobalSettingsTable settingsTable) {
         this.server = server;
         this.settingsTable = settingsTable;
@@ -52,6 +58,10 @@ public final class StateManager {
                 : de.jakomi1.project.connection.ConnectionResult.disconnect(kickMessage()));
     }
 
+    public ProjectServer server() {
+        return server;
+    }
+
     public StateManager settings(ServerState state, StateSettings stateSettings) {
         settings.put(state, stateSettings);
         if (state == currentState()) refresh();
@@ -64,6 +74,18 @@ public final class StateManager {
 
     public ServerState currentState() {
         return settingsTable.getServerState();
+    }
+
+    /**
+     * Laeuft der Server noch nicht, also vor dem Zustand
+     * {@link ServerState#STARTED}? Kurzel fuer Regeln, fuer die es keine
+     * State-Option gibt. Der Zustand wird nur abgefragt und nie gesetzt, die
+     * Sperre gilt damit fuer alle Einstellungen vor dem Start - STOPPED,
+     * OPEN und CLOSED - und faellt automatisch weg, sobald der Start-Countdown
+     * den Zustand STARTED gesetzt hat.
+     */
+    public boolean beforeStart() {
+        return currentState() != ServerState.STARTED;
     }
 
     public StateManager set(ServerState state) {
@@ -277,6 +299,61 @@ public final class StateManager {
 
     public Component kickMessage() {
         return settings(currentState()).kickMessage();
+    }
+
+    /**
+     * Bestimmt den Namen des Zustandsbefehls, der bei
+     * {@link ProjectServer#registerEverything()} registriert wird. Ohne
+     * gesetzten Namen (Vorgabe) gibt es keinen Befehl - das Projekt kann so
+     * selbst entscheiden, ob und unter welchem Namen {@code /start|stop|open}
+     * erreichbar ist.
+     */
+    public StateManager command(String name) {
+        this.commandName = name == null || name.isBlank() ? null : name;
+        return this;
+    }
+
+    public String commandName() {
+        return commandName;
+    }
+
+    /** Permission, die der Zustandsbefehl verlangt. Ohne Angabe die generierte. */
+    public StateManager commandPermission(String permission) {
+        this.commandPermission = permission == null || permission.isBlank() ? null : permission;
+        return this;
+    }
+
+    public String commandPermission() {
+        return commandPermission;
+    }
+
+    public StateManager commandAliases(String... aliases) {
+        if (aliases == null || aliases.length == 0) {
+            this.commandAliases = List.of();
+            return this;
+        }
+
+        List<String> cleaned = new ArrayList<>();
+
+        for (String alias : aliases) {
+            if (alias != null && !alias.isBlank()) {
+                cleaned.add(alias);
+            }
+        }
+
+        this.commandAliases = List.copyOf(cleaned);
+        return this;
+    }
+
+    public List<String> commandAliases() {
+        return commandAliases;
+    }
+
+    /** Registriert den konfigurierten Zustandsbefehl, sofern ein Name gesetzt ist. */
+    public void registerCommand() {
+        if (commandName == null) return;
+
+        new StateCommand(this).register(server.plugin());
     }
 
     public void refresh() {

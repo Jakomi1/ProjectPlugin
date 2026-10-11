@@ -8,8 +8,11 @@ import de.jakomi1.project.chat.ChatManager;
 import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.commandlog.CommandLogManager;
 import de.jakomi1.project.connection.ServerDialogManager;
+import de.jakomi1.project.advancement.AdvancementManager;
 import de.jakomi1.project.ecsee.EcseeManager;
 import de.jakomi1.project.invsee.InvseeManager;
+import de.jakomi1.project.interact.InteractManager;
+import de.jakomi1.project.join.JoinManager;
 import de.jakomi1.project.link.LinkManager;
 import de.jakomi1.project.nickname.NicknameManager;
 import de.jakomi1.project.pearl.PearlFixManager;
@@ -17,7 +20,10 @@ import de.jakomi1.project.terms.TermsManager;
 import de.jakomi1.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
 import de.jakomi1.project.playtime.PlaytimeManager;
+import de.jakomi1.project.report.ReportManager;
 import de.jakomi1.project.respawn.RespawnManager;
+import de.jakomi1.project.silent.SilentManager;
+import de.jakomi1.project.worldcycle.WorldCycleManager;
 import de.jakomi1.region.RegionProtection;
 import de.jakomi1.scheduler.Scheduler;
 import de.jakomi1.project.scoreboard.ScoreboardManager;
@@ -72,6 +78,12 @@ public class ProjectServer {
     private final ChatManager chatManager;
     private final CommandLogManager commandLogManager;
     private final RespawnManager respawnManager;
+    private final ReportManager reportManager;
+    private final WorldCycleManager worldCycleManager;
+    private final AdvancementManager advancementManager;
+    private final JoinManager joinManager;
+    private final SilentManager silentManager;
+    private final InteractManager interactManager;
 
     private final List<Manager> autoManagers;
 
@@ -118,6 +130,12 @@ public class ProjectServer {
         this.chatManager = new ChatManager(this);
         this.commandLogManager = new CommandLogManager(this);
         this.respawnManager = new RespawnManager(this);
+        this.reportManager = new ReportManager(this);
+        this.worldCycleManager = new WorldCycleManager(this);
+        this.advancementManager = new AdvancementManager(this);
+        this.joinManager = new JoinManager(this);
+        this.silentManager = new SilentManager(this);
+        this.interactManager = new InteractManager(this);
 
         this.autoManagers = List.of(
                 dialogManager,
@@ -137,7 +155,11 @@ public class ProjectServer {
                 termsManager,
                 chatManager,
                 commandLogManager,
-                respawnManager
+                respawnManager,
+                reportManager,
+                worldCycleManager,
+                joinManager,
+                interactManager
         );
     }
 
@@ -249,6 +271,30 @@ public class ProjectServer {
         return respawnManager;
     }
 
+    public ReportManager reports() {
+        return reportManager;
+    }
+
+    public WorldCycleManager worldCycles() {
+        return worldCycleManager;
+    }
+
+    public AdvancementManager advancements() {
+        return advancementManager;
+    }
+
+    public JoinManager join() {
+        return joinManager;
+    }
+
+    public SilentManager silent() {
+        return silentManager;
+    }
+
+    public InteractManager interact() {
+        return interactManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -290,6 +336,8 @@ public class ProjectServer {
     public void registerEverything() {
         plugin.getRegistry().getRegisterable().forEach(registerable -> registerable.register(plugin));
 
+        stateManager.registerCommand();
+
         for (Manager manager : autoManagers) {
             if (manager.defaultState()) {
                 manager.enable();
@@ -322,7 +370,12 @@ public class ProjectServer {
                 termsManager,
                 chatManager,
                 commandLogManager,
-                respawnManager
+                respawnManager,
+                reportManager,
+                worldCycleManager,
+                advancementManager,
+                joinManager,
+                silentManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();

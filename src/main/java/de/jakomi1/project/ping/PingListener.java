@@ -9,7 +9,11 @@ import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.util.CachedServerIcon;
 import org.jetbrains.annotations.NotNull;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class PingListener extends EventListener {
 
@@ -66,6 +70,7 @@ public class PingListener extends EventListener {
     }
 
     public PingListener setIconPath(@NotNull String path) {
+        if (path == null || path.isBlank()) return this;
         this.iconPath = path;
         return this;
     }
@@ -76,27 +81,38 @@ public class PingListener extends EventListener {
         return this;
     }
 
+    /**
+     * Laedt das Server-Icon einmalig und behaelt das fertig kodierte Ergebnis.
+     * Eine eigene Datei im DataFolder hat Vorrang; liegt dort keine, wird auf
+     * das gebuendelte {@code /iconPath}-Icon des Plugins zurueckgegriffen.
+     * Erst wenn beides fehlt, bleibt die Serverliste ohne Favicon.
+     */
     private void ensureIconLoaded() {
         if (iconChecked) return;
         if (plugin == null) return;
 
-        File iconFile = new File(
-                plugin.getDataFolder(),
-                iconPath
-
-        );
-
-        if (!iconFile.exists()) {
-            iconChecked = true;
-            return;
-        }
-
         try {
-            cachedIcon = plugin.getServer().loadServerIcon(iconFile);
+            BufferedImage image = readIcon();
+            if (image != null) {
+                cachedIcon = plugin.getServer().loadServerIcon(image);
+            }
         } catch (Exception ignored) {
             cachedIcon = null;
         } finally {
             iconChecked = true;
+        }
+    }
+
+    private BufferedImage readIcon() throws IOException {
+        File override = new File(plugin.getDataFolder(), iconPath);
+        if (override.exists()) {
+            return ImageIO.read(override);
+        }
+
+        // Das gebuendelte Icon liegt im (Shadow-)Jar des Plugins selbst,
+        // damit jedes Projekt sein eigenes Favicon mitliefern kann.
+        try (InputStream bundled = plugin.getResource(iconPath)) {
+            return bundled == null ? null : ImageIO.read(bundled);
         }
     }
 

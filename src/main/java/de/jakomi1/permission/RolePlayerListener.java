@@ -16,6 +16,7 @@ public final class RolePlayerListener extends EventListener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         manager.recordName(event.getPlayer());
+        manager.applyPendingRole(event.getPlayer());
         manager.apply(event.getPlayer());
     }
 

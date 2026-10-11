@@ -4,6 +4,8 @@ import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.supabase.Supabase;
 import de.jakomi1.supabase.SupabaseRoleSync;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
@@ -11,26 +13,35 @@ import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.permissions.PermissionDefault;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 public final class RoleManager implements Manager {
 
     private final ProjectServer server;
     private final RoleRegistry registry;
     private final Map<UUID, List<PermissionAttachment>> attachments = new ConcurrentHashMap<>();
+    private final Map<Role, List<String>> priorityPermissions = new LinkedHashMap<>();
 
     private RoleTable table;
     private RolePermissionTable rolePermissions;
+    private PendingRoleTable pendingRoles;
 
     private SupabaseRoleSync supabaseSync;
     private RolePlayerListener playerListener;
+    private RoleCommand roleCommand;
 
+    private Consumer<Player> changeListener;
     private String permissionPrefix = "cracked";
+    private boolean registerCommand = true;
+    private String commandPermission;
     private volatile boolean enabled;
     private volatile boolean tablesRegistered;
 
@@ -66,6 +77,11 @@ public final class RoleManager implements Manager {
         playerListener = new RolePlayerListener(this);
         playerListener.register(server.plugin());
 
+        if (registerCommand) {
+            roleCommand = new RoleCommand(this);
+            roleCommand.register(server.plugin());
+        }
+
         Bukkit.getOnlinePlayers().forEach(this::apply);
 
         if (supabaseSync != null) {
@@ -96,6 +112,8 @@ public final class RoleManager implements Manager {
             playerListener.unregister();
             playerListener = null;
         }
+
+        roleCommand = null;
 
         Bukkit.getOnlinePlayers().forEach(this::cleanup);
     }
@@ -135,6 +153,46 @@ public final class RoleManager implements Manager {
         return permissionPrefix;
     }
 
+    /**
+     * Registriert einen Callback, der nach jeder Rollenaenderung eines
+     * online Spielers auf dem Haupt-Thread laeuft. Darueber zieht ein Projekt
+     * beispielsweise die Tab-Sortierung oder den Op-Status nach.
+     */
+    public RoleManager onChange(Consumer<Player> listener) {
+        this.changeListener = listener;
+        return this;
+    }
+
+    /** Bestimmt, ob {@code /role} beim Aktivieren registriert wird. */
+    public RoleManager command(boolean register) {
+        this.registerCommand = register;
+        return this;
+    }
+
+    public boolean command() {
+        return registerCommand;
+    }
+
+    public RoleManager commandPermission(String permission) {
+        this.commandPermission = permission == null || permission.isBlank()
+                ? null
+                : permission;
+
+        return this;
+    }
+
+    /**
+     * Permission, die {@code /role} verlangt. Ohne eigene Angabe die
+     * OWNER-Permission aus dem gesetzten {@link #permissionPrefix()}.
+     */
+    public String commandPermission() {
+        if (commandPermission != null) {
+            return commandPermission;
+        }
+
+        return Role.OWNER.permission(permissionPrefix);
+    }
+
     public RoleTable table() {
         initializeTables();
         return table;
@@ -143,6 +201,12 @@ public final class RoleManager implements Manager {
     public RolePermissionTable rolePermissions() {
         initializeTables();
         return rolePermissions;
+    }
+
+    /** Offene Rollen-Vergaben fuer noch nie verbundene Spieler. */
+    public PendingRoleTable pendingRoles() {
+        initializeTables();
+        return pendingRoles;
     }
 
     public Role roleOf(UUID uuid) {
@@ -180,6 +244,7 @@ public final class RoleManager implements Manager {
 
         if (player != null && enabled) {
             apply(player);
+            notifyChange(player);
         }
 
         return this;
@@ -198,6 +263,7 @@ public final class RoleManager implements Manager {
 
         if (player != null && enabled) {
             apply(player);
+            notifyChange(player);
         }
 
         return this;
@@ -216,9 +282,45 @@ public final class RoleManager implements Manager {
 
         if (player != null && enabled) {
             apply(player);
+            notifyChange(player);
         }
 
         return this;
+    }
+
+    /**
+     * Wendet eine beim ersten Beitritt geparkte Rollen-Vergabe an.
+     *
+     * <p>Wird von {@link RolePlayerListener} aufgerufen, bevor die normale
+     * Rolle geladen wird. Eine geparkte Rolle ist eine echte Override-Rolle
+     * und ueberlebt das Standard-Rollen-System, bis sie ueber
+     * {@code /role remove} wieder entfernt wird.
+     *
+     * @return die vergebene Rolle, oder null, wenn nichts geparkt war
+     */
+    public Role applyPendingRole(Player player) {
+        if (player == null) {
+            return null;
+        }
+
+        PendingRoleTable pending = pendingRoles();
+        Role role = pending.pendingRole(player.getName());
+
+        if (role == null) {
+            return null;
+        }
+
+        pending.clear(player.getName());
+
+        table().assign(player.getUniqueId(), role, player.getName());
+
+        Component prefix = server.plugin().getPrefix();
+        player.sendMessage((prefix != null ? prefix : Component.empty()).append(
+                Component.text("Deine Rolle wurde zu ", NamedTextColor.GRAY)
+                        .append(role.coloredDisplay())
+                        .append(Component.text(" geändert.", NamedTextColor.GRAY))));
+
+        return role;
     }
 
     public RoleManager recordName(Player player) {
@@ -296,6 +398,48 @@ public final class RoleManager implements Manager {
         return this;
     }
 
+    /**
+     * Vergibt zusaetzliche Fremd-Plugin-Permissions an alle Rollen, deren
+     * {@link Role#priority() Prioritaet} mindestens der uebergebenen
+     * entspricht. So gilt "ab Stufe X" unabhaengig von der Eltern-Kette der
+     * Rollen. Die Permissions werden bei jedem {@link #apply(Player)} neu
+     * gesetzt und beim Quit ueber {@link #cleanup(Player)} entfernt.
+     */
+    public RoleManager grant(Role minimumRole, List<String> permissions) {
+        if (minimumRole == null || permissions == null || permissions.isEmpty()) {
+            return this;
+        }
+
+        priorityPermissions.merge(
+                minimumRole,
+                List.copyOf(permissions),
+                (existing, added) -> {
+                    List<String> merged = new ArrayList<>(existing);
+
+                    for (String permission : added) {
+                        if (!merged.contains(permission)) {
+                            merged.add(permission);
+                        }
+                    }
+
+                    return List.copyOf(merged);
+                }
+        );
+
+        if (enabled) {
+            applyAll();
+        }
+
+        return this;
+    }
+
+    public RoleManager grant(Role minimumRole, String... permissions) {
+        return grant(
+                minimumRole,
+                permissions == null ? List.of() : Arrays.asList(permissions)
+        );
+    }
+
     public RoleManager apply(Player player) {
         if (player == null || !enabled) {
             return this;
@@ -347,6 +491,24 @@ public final class RoleManager implements Manager {
             );
 
             added.add(attachment);
+        }
+
+        for (Map.Entry<Role, List<String>> entry : priorityPermissions.entrySet()) {
+            if (role.priority() < entry.getKey().priority()) {
+                continue;
+            }
+
+            for (String permission : entry.getValue()) {
+                PermissionAttachment attachment =
+                        player.addAttachment(server.plugin());
+
+                attachment.setPermission(
+                        permission,
+                        true
+                );
+
+                added.add(attachment);
+            }
         }
 
         attachments.put(
@@ -436,9 +598,11 @@ public final class RoleManager implements Manager {
 
         table = new RoleTable();
         rolePermissions = new RolePermissionTable();
+        pendingRoles = new PendingRoleTable();
 
         table.register(server.plugin());
         rolePermissions.register(server.plugin());
+        pendingRoles.register(server.plugin());
 
         table = server.plugin()
                 .getDatabase()
@@ -447,6 +611,10 @@ public final class RoleManager implements Manager {
         rolePermissions = server.plugin()
                 .getDatabase()
                 .getTable(RolePermissionTable.class);
+
+        pendingRoles = server.plugin()
+                .getDatabase()
+                .getTable(PendingRoleTable.class);
 
         if (table == null) {
             throw new IllegalStateException(
@@ -460,6 +628,29 @@ public final class RoleManager implements Manager {
             );
         }
 
+        if (pendingRoles == null) {
+            throw new IllegalStateException(
+                    "PendingRoleTable konnte nicht registriert werden."
+            );
+        }
+
         tablesRegistered = true;
+    }
+
+    private void notifyChange(Player player) {
+        Consumer<Player> listener = changeListener;
+
+        if (listener == null || player == null) {
+            return;
+        }
+
+        // Bei Folia laeuft der Rollenwechsel auf dem Region-Thread. Der
+        // Callback soll aber wie ein normaler Befehl auf dem Haupt-Thread
+        // laufen (Tab-Refresh, Op-Sync), deshalb wird er dort geplant.
+        server.scheduler().runEntity(player, () -> {
+            if (player.isOnline()) {
+                listener.accept(player);
+            }
+        });
     }
 }

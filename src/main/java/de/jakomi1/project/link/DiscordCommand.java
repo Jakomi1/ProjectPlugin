@@ -31,6 +31,11 @@ public final class DiscordCommand implements CustomCommand {
     }
 
     @Override
+    public List<String> aliases() {
+        return List.of("dc");
+    }
+
+    @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         String token = manager.discordToken();
 

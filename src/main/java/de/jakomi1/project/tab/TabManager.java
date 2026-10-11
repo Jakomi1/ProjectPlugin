@@ -7,6 +7,7 @@ import de.jakomi1.permission.RoleManager;
 import de.jakomi1.scheduler.Scheduler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
@@ -21,7 +22,9 @@ public final class TabManager implements Manager {
 
     private boolean enabled;
     private long updatePeriod = 120L;
-
+    private volatile double cachedTps = 20.0;
+    private volatile double cachedMspt = 50.0;
+    private Scheduler.Task metricsTimer;
     private Function<Player, Component> headerProvider = player -> defaultHeader();
     private Function<Player, Component> footerProvider = player -> defaultFooter();
     private Function<Player, Component> listNameProvider = player ->
@@ -91,7 +94,18 @@ public final class TabManager implements Manager {
     public TabManager enable() {
         if (enabled) return this;
         enabled = true;
-
+        metricsTimer = server.scheduler().runTimer(() -> {
+            server.scheduler().runGlobal(() -> {
+                try {
+                    double[] tps = Bukkit.getServer().getTPS();
+                    if (tps.length > 0) {
+                        cachedTps = Math.min(tps[0] + 0.5, 20.0);
+                        cachedMspt = cachedTps > 0 ? 1000.0 / cachedTps : 50.0;
+                    }
+                } catch (UnsupportedOperationException ignored) {
+                }
+            });
+        }, 20L, 20L);
         timer = server.scheduler().runTimer(this::updateAll, 20L, updatePeriod);
         updateAll();
         return this;
@@ -110,6 +124,11 @@ public final class TabManager implements Manager {
         if (timer != null) {
             timer.cancel();
             timer = null;
+        }
+
+        if (metricsTimer != null) {
+            metricsTimer.cancel();
+            metricsTimer = null;
         }
     }
 
@@ -143,36 +162,56 @@ public final class TabManager implements Manager {
         player.playerListName(listNameProvider.apply(player));
     }
 
+    /**
+     * Kopfzeile: Projekt-Titel und darunter eine Leerzeile als Abstand zur
+     * Spielerliste. Wird kein Titel gesetzt, bleibt nur der Abstand.
+     */
     private Component defaultHeader() {
         Component title = server.title();
+        Component placeholder = placeholder();
 
         if (title == null || title.equals(Component.empty())) {
-            return Component.text("                                          ", NamedTextColor.GRAY);
+            return placeholder;
         }
 
-        return Component.text("                                          ", NamedTextColor.GRAY)
-                .appendNewline()
-                .append(title)
-                .appendNewline();
+        return title.appendNewline().append(placeholder);
     }
 
     private @NotNull Component defaultFooter() {
-        double tps = Math.min(Bukkit.getServer().getTPS()[0] + 0.5, 20);
-        double msPerTick = tps > 0 ? 1000.0 / tps : 50;
+        double tps = cachedTps;
+        double msPerTick = cachedMspt;
 
-        Component placeholder = Component.text("                                          ", NamedTextColor.GRAY);
+        Component placeholder = placeholder();
 
         Component tpsComponent = Component.text("TPS: ", NamedTextColor.GRAY)
-                .append(Component.text(String.format("%.2f", tps).replace(",", "."),
-                        tps >= 15 ? NamedTextColor.GREEN : (tps >= 10 ? NamedTextColor.YELLOW : NamedTextColor.RED)));
+                .append(Component.text(
+                        String.format(java.util.Locale.US, "%.2f", tps),
+                        tps >= 15 ? NamedTextColor.GREEN
+                                : (tps >= 10 ? NamedTextColor.YELLOW : NamedTextColor.RED)
+                ));
 
-        Component msComponent = Component.text("  |  MSPT: ", NamedTextColor.GRAY)
-                .append(Component.text(String.format("%.1f ms", msPerTick).replace(",", "."),
-                        msPerTick <= 75 ? NamedTextColor.GREEN : (msPerTick <= 100 ? NamedTextColor.YELLOW : NamedTextColor.RED)));
+        Component msComponent = Component.text("   MSPT: ", NamedTextColor.GRAY)
+                .append(Component.text(
+                        String.format(java.util.Locale.US, "%.1f ms", msPerTick),
+                        msPerTick <= 75 ? NamedTextColor.GREEN
+                                : (msPerTick <= 100 ? NamedTextColor.YELLOW : NamedTextColor.RED)
+                ));
+
+        Component playersComponent = Component.text(
+                        "   " + Bukkit.getOnlinePlayers().size(),
+                        NamedTextColor.GREEN
+                )
+                .append(Component.text(" 👤", NamedTextColor.GRAY));
 
         return Component.newline()
-                .append(tpsComponent.append(msComponent))
+                .append(tpsComponent.append(msComponent).append(playersComponent))
                 .appendNewline()
                 .append(placeholder);
+    }
+
+    /** Leerzeile als Abstand - durchgestrichen, damit sie garantiert leer bleibt. */
+    private Component placeholder() {
+        return Component.text("                                          ", NamedTextColor.GRAY)
+                .decoration(TextDecoration.STRIKETHROUGH, true);
     }
 }

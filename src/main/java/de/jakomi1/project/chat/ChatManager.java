@@ -29,6 +29,7 @@ public final class ChatManager implements Manager {
     private Predicate<Player> receiverFilter = player -> true;
     private Function<Player, Component> joinResolver;
     private Function<Player, Component> quitResolver;
+    private String silentTag;
 
     public ChatManager(ProjectServer server) {
         this.server = server;
@@ -81,6 +82,16 @@ public final class ChatManager implements Manager {
         return this;
     }
 
+    /**
+     * Traeger dieses Scoreboard-Tags sehen keine fremden Chat-Nachrichten -
+     * das uebliche Verhalten des Silent-Modus. Die eigene Nachricht sieht der
+     * Absender weiterhin.
+     */
+    public ChatManager silentTag(String tag) {
+        this.silentTag = tag == null || tag.isBlank() ? null : tag;
+        return this;
+    }
+
     /** Meldung beim Betreten. {@code null} laesst die Vanilla-Meldung stehen. */
     public ChatManager join(Function<Player, Component> resolver) {
         this.joinResolver = resolver;
@@ -98,6 +109,10 @@ public final class ChatManager implements Manager {
     }
 
     public boolean visible(Player receiver) {
+        if (silentTag != null && receiver != null && receiver.getScoreboardTags().contains(silentTag)) {
+            return false;
+        }
+
         return receiverFilter.test(receiver);
     }
 
