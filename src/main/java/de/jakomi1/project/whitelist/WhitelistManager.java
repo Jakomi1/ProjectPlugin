@@ -127,6 +127,18 @@ public final class WhitelistManager implements Manager {
         return server.permissions().roleOf(uuid).inherits(bypassRole);
     }
 
+    /**
+     * Rollenbasierte Freigabe fuer das Whitelist-Kommando. Erlaubt die
+     * Mindestrolle und alle Rollen, die von ihr erben. Damit funktioniert
+     * das Kommando auch dann, wenn das Permission-Knoten (z. B. mangels
+     * aktivem RoleManager) nicht vergeben wurde.
+     */
+    public boolean canManage(UUID uuid) {
+        if (uuid == null) return false;
+
+        return server.permissions().roleOf(uuid).inherits(minimumRole);
+    }
+
     public WhitelistManager kickMessage(Component message) {
         this.kickMessage = message;
         return this;

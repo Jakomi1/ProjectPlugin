@@ -6,6 +6,7 @@ import de.jakomi1.biome.BiomeManager;
 import de.jakomi1.dimension.DimensionManager;
 import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.connection.ServerDialogManager;
+import de.jakomi1.project.ecsee.EcseeManager;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.link.LinkManager;
 import de.jakomi1.project.pearl.PearlFixManager;
@@ -46,6 +47,7 @@ public class ProjectServer {
     private final RegionProtection regionProtection;
     private final WorldPerformance worldPerformance;
     private final InvseeManager invseeManager;
+    private final EcseeManager ecseeManager;
     private final SkinTable skinTable;
     private final SkinManager skinManager;
     private final CombatManager combatManager;
@@ -82,6 +84,7 @@ public class ProjectServer {
         this.regionProtection = new RegionProtection(this);
         this.worldPerformance = new WorldPerformance(this);
         this.invseeManager = new InvseeManager(this);
+        this.ecseeManager = new EcseeManager(this);
 
         this.skinTable = new SkinTable();
         this.skinTable.register(plugin);
@@ -104,6 +107,7 @@ public class ProjectServer {
         this.autoManagers = List.of(
                 dialogManager,
                 invseeManager,
+                ecseeManager,
                 whitelistManager,
                 scoreboardManager,
                 teamManager,
@@ -155,6 +159,10 @@ public class ProjectServer {
 
     public InvseeManager invsee() {
         return invseeManager;
+    }
+
+    public EcseeManager ecsee() {
+        return ecseeManager;
     }
 
     public SkinManager skins() {
@@ -256,6 +264,7 @@ public class ProjectServer {
                 worldPerformance,
                 regionProtection,
                 invseeManager,
+                ecseeManager,
                 roleManager,
                 dialogManager,
                 combatManager,

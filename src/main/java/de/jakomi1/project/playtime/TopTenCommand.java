@@ -56,7 +56,7 @@ public final class TopTenCommand implements CustomCommand {
             @NotNull String label,
             @NotNull String[] args
     ) {
-        List<PlaytimeTable.PlaytimeEntry> top = PlaytimeStore.top(LIMIT);
+        List<PlaytimeTable.PlaytimeEntry> top = manager.top(LIMIT);
 
         if (top.isEmpty()) {
             sender.sendMessage(prefix().append(

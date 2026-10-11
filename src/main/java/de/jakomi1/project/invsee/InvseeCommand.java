@@ -45,6 +45,11 @@ public final class InvseeCommand implements CustomCommand {
     }
 
     @Override
+    public List<String> aliases() {
+        return List.of("isee", "inventorysee");
+    }
+
+    @Override
     public String permission() {
         return manager.permission();
     }

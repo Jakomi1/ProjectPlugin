@@ -107,6 +107,13 @@ public final class PlaytimeTable extends Table<UUID, PlaytimeTable.PlaytimeEntry
         return idsByName.containsKey(name.toLowerCase(Locale.ROOT));
     }
 
+    /** UUID zu einem Anzeigenamen, oder null wenn unbekannt. */
+    public UUID uuidOf(String name) {
+        if (name == null || name.isBlank()) return null;
+
+        return idsByName.get(name.toLowerCase(Locale.ROOT));
+    }
+
     private static void indexName(UUID uuid, String name) {
         if (uuid == null || name == null || name.isBlank()) return;
 

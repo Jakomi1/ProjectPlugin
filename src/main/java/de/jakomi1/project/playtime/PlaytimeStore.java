@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 /**
  * Spielzeit-Zaehler.
@@ -158,10 +159,27 @@ public final class PlaytimeStore {
      * den bereits erzeugten Snapshot.
      */
     public static List<PlaytimeTable.PlaytimeEntry> top(int limit) {
+        return top(limit, null);
+    }
+
+    /**
+     * Wie {@link #top(int)}, aber Eintraege, die {@code filter} nicht
+     * bestehen, werden uebersprungen. Das Limit wird erst nach dem Filtern
+     * angewandt, damit trotz Ausschluessen {@code limit} Spieler erscheinen.
+     */
+    public static List<PlaytimeTable.PlaytimeEntry> top(int limit,
+                                                        Predicate<PlaytimeTable.PlaytimeEntry> filter) {
         List<PlaytimeTable.PlaytimeEntry> snapshot = topSnapshot.get();
         if (limit <= 0 || snapshot.isEmpty()) return List.of();
 
-        return snapshot.subList(0, Math.min(limit, snapshot.size()));
+        if (filter == null) {
+            return snapshot.subList(0, Math.min(limit, snapshot.size()));
+        }
+
+        return snapshot.stream()
+                .filter(filter)
+                .limit(limit)
+                .toList();
     }
 
     private static void save() {

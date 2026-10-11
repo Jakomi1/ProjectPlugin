@@ -43,12 +43,12 @@ public final class WhitelistCommand implements CustomCommand {
 
     @Override
     public String permission() {
-        return manager.permission();
+        return "";
     }
 
     @Override
     public PermissionDefault permissionDefault() {
-        return PermissionDefault.OP;
+        return null;
     }
 
     @Override
@@ -58,6 +58,15 @@ public final class WhitelistCommand implements CustomCommand {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (!hasAccess(sender)) {
+            sender.sendMessage(prefix().append(Component.text(
+                    "Dafür fehlt dir die Berechtigung. Benötigt wird die Rolle "
+                            + manager.minimumRole().display() + " oder höher.",
+                    NamedTextColor.RED
+            )));
+            return true;
+        }
+
         if (args.length == 0) {
             sender.sendMessage(prefix().append(Component.text(usage(), NamedTextColor.RED)));
             return true;
@@ -197,6 +206,12 @@ public final class WhitelistCommand implements CustomCommand {
 
     private static String formatList(List<String> names) {
         return String.join(", ", names);
+    }
+
+    private boolean hasAccess(CommandSender sender) {
+        if (sender.hasPermission(manager.permission())) return true;
+
+        return sender instanceof Player player && manager.canManage(player.getUniqueId());
     }
 
     private Component prefix() {

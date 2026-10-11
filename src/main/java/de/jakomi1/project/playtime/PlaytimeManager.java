@@ -3,8 +3,14 @@ package de.jakomi1.project.playtime;
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.permission.Role;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Spielzeit-Verwaltung.
@@ -25,6 +31,9 @@ public final class PlaytimeManager implements Manager {
     private boolean tableRegistered;
     private boolean registerCommand = true;
     private Role minimumRole = Role.MODERATOR;
+
+    /** Rollen, die in {@code /topten} nicht auftauchen sollen. */
+    private final Set<Role> excludedRoles = new LinkedHashSet<>();
 
     public PlaytimeManager(ProjectServer server) {
         this.server = server;
@@ -96,6 +105,72 @@ public final class PlaytimeManager implements Manager {
         return minimumRole;
     }
 
+    /**
+     * Schliesst eine Rolle von {@code /topten} aus. Ausgeschlossen sind genau
+     * diese Rolle und alle Rollen, die von ihr erben (also auch alles
+     * darueber). Nur wirksam, solange der TopTen-Command aktiv ist.
+     */
+    public PlaytimeManager excludeRole(Role role) {
+        if (role != null) {
+            excludedRoles.add(role);
+        }
+        return this;
+    }
+
+    /** Schliesst mehrere Rollen auf einmal aus. */
+    public PlaytimeManager excludeRoles(Role... roles) {
+        if (roles != null) {
+            for (Role role : roles) {
+                excludeRole(role);
+            }
+        }
+        return this;
+    }
+
+    /** Schliesst mehrere Rollen auf einmal aus. */
+    public PlaytimeManager excludeRoles(Collection<Role> roles) {
+        if (roles != null) {
+            for (Role role : roles) {
+                excludeRole(role);
+            }
+        }
+        return this;
+    }
+
+    /** Hebt alle Ausschluesse wieder auf. */
+    public PlaytimeManager clearExcludedRoles() {
+        excludedRoles.clear();
+        return this;
+    }
+
+    public Set<Role> excludedRoles() {
+        return Set.copyOf(excludedRoles);
+    }
+
+    /** Ist diese Rolle (oder eine von ihr erbende) ausgeschlossen? */
+    public boolean isExcluded(Role role) {
+        if (role == null) return false;
+
+        for (Role excluded : excludedRoles) {
+            if (role.inherits(excluded)) return true;
+        }
+
+        return false;
+    }
+
+    private boolean isExcluded(String name) {
+        if (name == null || name.isBlank() || excludedRoles.isEmpty()) return false;
+
+        UUID uuid = playtimeTable().uuidOf(name);
+        if (uuid == null) {
+            Player online = Bukkit.getPlayerExact(name);
+            if (online == null) return false;
+            uuid = online.getUniqueId();
+        }
+
+        return isExcluded(server.permissions().roleOf(uuid));
+    }
+
     public int playtimeTicks(org.bukkit.OfflinePlayer player) {
         if (player == null) return 0;
 
@@ -116,7 +191,11 @@ public final class PlaytimeManager implements Manager {
     }
 
     public List<PlaytimeTable.PlaytimeEntry> top(int limit) {
-        return PlaytimeStore.top(limit);
+        if (excludedRoles.isEmpty()) {
+            return PlaytimeStore.top(limit);
+        }
+
+        return PlaytimeStore.top(limit, entry -> !isExcluded(entry.name()));
     }
 
     public List<String> knownNames() {
