@@ -4,6 +4,7 @@ import de.jakomi1.database.table.GlobalSettingsTable;
 import de.jakomi1.database.table.SkinTable;
 import de.jakomi1.biome.BiomeManager;
 import de.jakomi1.dimension.DimensionManager;
+import de.jakomi1.project.chat.ChatManager;
 import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.connection.ServerDialogManager;
 import de.jakomi1.project.ecsee.EcseeManager;
@@ -11,6 +12,7 @@ import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.link.LinkManager;
 import de.jakomi1.project.nickname.NicknameManager;
 import de.jakomi1.project.pearl.PearlFixManager;
+import de.jakomi1.project.terms.TermsManager;
 import de.jakomi1.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
 import de.jakomi1.project.playtime.PlaytimeManager;
@@ -64,6 +66,8 @@ public class ProjectServer {
     private final ServerDialogManager dialogManager;
     private final PearlFixManager pearlFixManager;
     private final NicknameManager nicknameManager;
+    private final TermsManager termsManager;
+    private final ChatManager chatManager;
 
     private final List<Manager> autoManagers;
 
@@ -106,6 +110,8 @@ public class ProjectServer {
         this.bossBarManager = new BossBarManager(this);
         this.pearlFixManager = new PearlFixManager(this);
         this.nicknameManager = new NicknameManager(this);
+        this.termsManager = new TermsManager(this);
+        this.chatManager = new ChatManager(this);
 
         this.autoManagers = List.of(
                 dialogManager,
@@ -121,7 +127,9 @@ public class ProjectServer {
                 sidebarManager,
                 bossBarManager,
                 pearlFixManager,
-                nicknameManager
+                nicknameManager,
+                termsManager,
+                chatManager
         );
     }
 
@@ -217,6 +225,14 @@ public class ProjectServer {
         return nicknameManager;
     }
 
+    public TermsManager terms() {
+        return termsManager;
+    }
+
+    public ChatManager chat() {
+        return chatManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -286,7 +302,9 @@ public class ProjectServer {
                 sidebarManager,
                 bossBarManager,
                 pearlFixManager,
-                nicknameManager
+                nicknameManager,
+                termsManager,
+                chatManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();

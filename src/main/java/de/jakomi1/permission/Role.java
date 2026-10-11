@@ -130,6 +130,7 @@ public final class Role {
         return RoleRegistry.getDefault().role(name);
     }
 
+    public static final Role BOT = new Role("BOT", "Bot", "#5a5a5a", "#9b9b9b", -1, "MEMBER", Set.of(), Source.BUILTIN);
     public static final Role MEMBER = new Role("MEMBER", "Mitglied", "#219752", "#2ecc71", 0, null, Set.of(), Source.BUILTIN);
     public static final Role CONTENT_CREATOR = new Role("CONTENT_CREATOR", "Creator", "#aa2a86", "#f27ba4", 1, "MEMBER", Set.of(), Source.BUILTIN);
     public static final Role BOOSTER = new Role("BOOSTER", "Booster", "#965f7f", "#ffaadc", 2, "MEMBER", Set.of(), Source.BUILTIN);

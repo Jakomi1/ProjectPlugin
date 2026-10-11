@@ -28,6 +28,7 @@ public final class RoleRegistry {
     }
 
     private void seed() {
+        register(Role.BOT);
         register(Role.MEMBER);
         register(Role.CONTENT_CREATOR);
         register(Role.BOOSTER);
