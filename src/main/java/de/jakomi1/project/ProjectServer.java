@@ -6,6 +6,7 @@ import de.jakomi1.biome.BiomeManager;
 import de.jakomi1.dimension.DimensionManager;
 import de.jakomi1.project.chat.ChatManager;
 import de.jakomi1.project.combat.CombatManager;
+import de.jakomi1.project.commandlog.CommandLogManager;
 import de.jakomi1.project.connection.ServerDialogManager;
 import de.jakomi1.project.ecsee.EcseeManager;
 import de.jakomi1.project.invsee.InvseeManager;
@@ -16,6 +17,7 @@ import de.jakomi1.project.terms.TermsManager;
 import de.jakomi1.permission.RoleManager;
 import de.jakomi1.project.ping.ServerPing;
 import de.jakomi1.project.playtime.PlaytimeManager;
+import de.jakomi1.project.respawn.RespawnManager;
 import de.jakomi1.region.RegionProtection;
 import de.jakomi1.scheduler.Scheduler;
 import de.jakomi1.project.scoreboard.ScoreboardManager;
@@ -68,6 +70,8 @@ public class ProjectServer {
     private final NicknameManager nicknameManager;
     private final TermsManager termsManager;
     private final ChatManager chatManager;
+    private final CommandLogManager commandLogManager;
+    private final RespawnManager respawnManager;
 
     private final List<Manager> autoManagers;
 
@@ -112,6 +116,8 @@ public class ProjectServer {
         this.nicknameManager = new NicknameManager(this);
         this.termsManager = new TermsManager(this);
         this.chatManager = new ChatManager(this);
+        this.commandLogManager = new CommandLogManager(this);
+        this.respawnManager = new RespawnManager(this);
 
         this.autoManagers = List.of(
                 dialogManager,
@@ -129,7 +135,9 @@ public class ProjectServer {
                 pearlFixManager,
                 nicknameManager,
                 termsManager,
-                chatManager
+                chatManager,
+                commandLogManager,
+                respawnManager
         );
     }
 
@@ -233,6 +241,14 @@ public class ProjectServer {
         return chatManager;
     }
 
+    public CommandLogManager commandLog() {
+        return commandLogManager;
+    }
+
+    public RespawnManager respawn() {
+        return respawnManager;
+    }
+
     public ProjectServer prefix(Component prefix) {
         this.prefix = prefix;
         plugin.setPrefix(prefix);
@@ -304,7 +320,9 @@ public class ProjectServer {
                 pearlFixManager,
                 nicknameManager,
                 termsManager,
-                chatManager
+                chatManager,
+                commandLogManager,
+                respawnManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();
