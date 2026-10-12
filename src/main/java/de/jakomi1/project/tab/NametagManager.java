@@ -2,6 +2,7 @@ package de.jakomi1.project.tab;
 
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
+import de.jakomi1.project.nickname.NicknameManager;
 import de.jakomi1.project.nms.NmsBridge;
 import de.jakomi1.permission.Role;
 import de.jakomi1.permission.RoleManager;
@@ -71,6 +72,17 @@ public final class NametagManager implements Manager {
 
     public NametagManager syncPeriod(long ticks) {
         this.syncPeriod = Math.max(ticks, 1L);
+        return this;
+    }
+
+    /**
+     * Nametag zeigt den Nicknamen aus dem {@link NicknameManager} (bzw. den
+     * echten Namen, wenn kein Nickname gesetzt ist) - ohne Rollen-Prefix.
+     */
+    public NametagManager nicknames(NicknameManager nicknames) {
+        this.customNameResolver = nicknames == null
+                ? player -> null
+                : player -> nicknames.name(player);
         return this;
     }
 
