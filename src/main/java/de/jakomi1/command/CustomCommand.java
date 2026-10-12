@@ -39,6 +39,24 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
         return null;
     }
 
+    /**
+     * Ob der Sender diesen Befehl ausfuehren und damit auch sehen darf.
+     *
+     * <p>Standardmaessig entscheidet der {@link #permission()}-Knoten: ohne
+     * Permission ist der Befehl fuer alle sichtbar, mit Permission nur fuer
+     * Sender, die den Knoten besitzen. Paper blendet Befehle ohne Freigabe
+     * aus der Vervollstaendigung aus. Befehle mit rollenbasierter Freigabe
+     * koennen diese Methode ueberschreiben, damit die Sichtbarkeit exakt der
+     * tatsaechlichen Freigabe entspricht.
+     */
+    default boolean canUse(@NotNull CommandSender sender) {
+        String permission = permission();
+
+        return permission == null
+                || permission.isEmpty()
+                || sender.hasPermission(permission);
+    }
+
     default String generatedPermission(ProjectPlugin plugin) {
         return plugin.getName().toLowerCase()
                 + ".command."
@@ -129,8 +147,7 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
                     String[] args
             ) {
 
-                if (!permission.isEmpty()
-                        && !sender.hasPermission(permission)) {
+                if (!CustomCommand.this.canUse(sender)) {
                     return true;
                 }
 
@@ -140,6 +157,11 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
                         label,
                         args
                 );
+            }
+
+            @Override
+            public boolean testPermissionSilent(@NotNull CommandSender target) {
+                return CustomCommand.this.canUse(target);
             }
 
             @Override

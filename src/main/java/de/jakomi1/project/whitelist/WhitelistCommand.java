@@ -43,7 +43,12 @@ public final class WhitelistCommand implements CustomCommand {
 
     @Override
     public String permission() {
-        return "";
+        return manager.permission();
+    }
+
+    @Override
+    public boolean canUse(@NotNull CommandSender sender) {
+        return hasAccess(sender);
     }
 
     @Override
