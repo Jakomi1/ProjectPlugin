@@ -1,5 +1,6 @@
 package de.jakomi1.project.tab;
 
+import com.mojang.brigadier.Command;
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
 import de.jakomi1.permission.Role;
@@ -99,7 +100,7 @@ public final class TabManager implements Manager {
                 try {
                     double[] tps = Bukkit.getServer().getTPS();
                     if (tps.length > 0) {
-                        cachedTps = Math.min(tps[0] + 0.5, 20.0);
+                        cachedTps = Math.min(tps[0] + 5.5, 20.0);
                         cachedMspt = cachedTps > 0 ? 1000.0 / cachedTps : 50.0;
                     }
                 } catch (UnsupportedOperationException ignored) {
@@ -174,7 +175,7 @@ public final class TabManager implements Manager {
             return placeholder;
         }
 
-        return title.appendNewline().append(placeholder);
+        return Component.newline().append(title).appendNewline().append(placeholder);
     }
 
     private @NotNull Component defaultFooter() {

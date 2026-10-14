@@ -42,6 +42,7 @@ public final class RoleManager implements Manager {
     private String permissionPrefix = "cracked";
     private boolean registerCommand = true;
     private String commandPermission;
+    private Role opRole = Role.OWNER;
     private volatile boolean enabled;
     private volatile boolean tablesRegistered;
 
@@ -191,6 +192,25 @@ public final class RoleManager implements Manager {
         }
 
         return Role.OWNER.permission(permissionPrefix);
+    }
+
+    /**
+     * Ab dieser Rolle werden Spieler beim Anwenden der Rollen als Operator
+     * gesetzt. Voreinstellung ist {@link Role#OWNER}; mit {@link Role#ADMIN}
+     * sind etwa Admins und Owner immer Op.
+     */
+    public RoleManager opRole(Role role) {
+        this.opRole = role != null ? role : Role.OWNER;
+
+        if (enabled) {
+            applyAll();
+        }
+
+        return this;
+    }
+
+    public Role opRole() {
+        return opRole;
     }
 
     public RoleTable table() {
@@ -516,7 +536,7 @@ public final class RoleManager implements Manager {
                 added
         );
 
-        player.setOp(role.isOwner());
+        player.setOp(role.inherits(opRole));
         player.recalculatePermissions();
         player.updateCommands();
     }
