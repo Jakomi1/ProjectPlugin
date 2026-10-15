@@ -64,13 +64,17 @@ public final class DimensionCommand implements CustomCommand {
 
     @Override
     public String permission() {
-        String permission = manager.permission();
-        return permission != null ? permission : "";
+        return manager.permission();
+    }
+
+    @Override
+    public boolean canUse(@NotNull CommandSender sender) {
+        return hasAccess(sender);
     }
 
     @Override
     public PermissionDefault permissionDefault() {
-        return PermissionDefault.OP;
+        return null;
     }
 
     @Override
@@ -80,6 +84,15 @@ public final class DimensionCommand implements CustomCommand {
             @NotNull String label,
             @NotNull String[] args
     ) {
+        if (!hasAccess(sender)) {
+            sender.sendMessage(prefix().append(Component.text(
+                    "Dafür fehlt dir die Berechtigung. Benötigt wird die Rolle "
+                            + manager.minimumRole().display() + " oder höher.",
+                    NamedTextColor.RED
+            )));
+            return true;
+        }
+
         if (args.length == 0) {
             sender.sendMessage(prefix().append(Component.text(usage(), NamedTextColor.RED)));
             return true;
@@ -315,6 +328,12 @@ public final class DimensionCommand implements CustomCommand {
         } catch (NumberFormatException e) {
             return Double.NaN;
         }
+    }
+
+    private boolean hasAccess(CommandSender sender) {
+        if (sender.hasPermission(manager.permission())) return true;
+
+        return sender instanceof Player player && manager.canUse(player.getUniqueId());
     }
 
     private Component prefix() {

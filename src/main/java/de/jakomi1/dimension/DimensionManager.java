@@ -1,6 +1,7 @@
 package de.jakomi1.dimension;
 
 import de.jakomi1.database.table.GlobalSettingsTable;
+import de.jakomi1.permission.Role;
 import de.jakomi1.datapack.ManagedDatapack;
 import de.jakomi1.project.Manager;
 import de.jakomi1.project.ProjectServer;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -49,6 +51,7 @@ public final class DimensionManager implements Manager {
     private boolean autoDeploy = true;
 
     private boolean registerCommand = true;
+    private Role minimumRole = Role.OWNER;
     private String permission;
     private final DimensionCommand command;
     private final DimensionAccessListener accessListener;
@@ -278,13 +281,34 @@ public final class DimensionManager implements Manager {
         return registerCommand;
     }
 
+    public DimensionManager minimumRole(Role role) {
+        this.minimumRole = role != null ? role : Role.OWNER;
+        this.permission = null;
+        return this;
+    }
+
+    public Role minimumRole() {
+        return minimumRole;
+    }
+
     public DimensionManager permission(String permission) {
         this.permission = permission == null || permission.isBlank() ? null : permission;
         return this;
     }
 
     public String permission() {
-        return permission;
+        if (permission != null) return permission;
+
+        return server.permissions().permissionPrefix()
+                + "."
+                + minimumRole.name().toLowerCase(Locale.ROOT);
+    }
+
+    /** Rollenbasierte Freigabe - Rolle {@link #minimumRole()} oder hoeher. */
+    public boolean canUse(UUID uuid) {
+        if (uuid == null) return false;
+
+        return server.permissions().roleOf(uuid).inherits(minimumRole);
     }
 
     public ProjectServer server() {
