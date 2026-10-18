@@ -33,7 +33,7 @@ public final class RoleCommand implements CustomCommand {
 
     private static final List<String> ROLE_NAMES = List.of(
             "BOT", "MEMBER", "CONTENT_CREATOR", "BOOSTER", "VIP",
-            "DEVELOPER", "BUILDER", "SUPPORTER", "MODERATOR", "ADMIN"
+            "DEVELOPER", "BUILDER", "SUPPORTER", "SUPPORTER_PLUS", "MODERATOR", "ADMIN"
     );
 
     private final RoleManager manager;
@@ -317,6 +317,7 @@ public final class RoleCommand implements CustomCommand {
             case "DEVELOPER" -> Role.DEVELOPER;
             case "BUILDER" -> Role.BUILDER;
             case "SUPPORTER" -> Role.SUPPORTER;
+            case "SUPPORTER_PLUS" -> Role.SUPPORTER_PLUS;
             case "MODERATOR" -> Role.MODERATOR;
             case "ADMIN" -> Role.ADMIN;
             default -> null;

@@ -36,6 +36,7 @@ public final class RoleRegistry {
         register(Role.DEVELOPER);
         register(Role.BUILDER);
         register(Role.SUPPORTER);
+        register(Role.SUPPORTER_PLUS);
         register(Role.MODERATOR);
         register(Role.ADMIN);
         register(Role.OWNER);

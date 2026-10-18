@@ -138,9 +138,10 @@ public final class Role {
     public static final Role DEVELOPER = new Role("DEVELOPER", "Developer", "#4cadd0", "#b2f9ff", 4, "MEMBER", Set.of(), Source.BUILTIN);
     public static final Role BUILDER = new Role("BUILDER", "Builder", "#6c45b4", "#5d96ff", 5, "MEMBER", Set.of(), Source.BUILTIN);
     public static final Role SUPPORTER = new Role("SUPPORTER", "Supporter", "#2a57e9", "#5B7FEB", 6, "MEMBER", Set.of(), Source.BUILTIN);
-    public static final Role MODERATOR = new Role("MODERATOR", "Moderator", "#c25a00", "#ecb83e", 7, "SUPPORTER", Set.of(), Source.BUILTIN);
-    public static final Role ADMIN = new Role("ADMIN", "Admin", "#700707", "#ff0000", 8, "MODERATOR", Set.of(), Source.BUILTIN);
-    public static final Role OWNER = new Role("OWNER", "Owner", "#c305ff", "#2bd9fd", 9, "ADMIN", Set.of(), Source.BUILTIN);
+    public static final Role SUPPORTER_PLUS = new Role("SUPPORTER_PLUS", "Supporter+", "#2b4ff0", "#82b1ff", 7, "SUPPORTER", Set.of(), Source.BUILTIN);
+    public static final Role MODERATOR = new Role("MODERATOR", "Moderator", "#c25a00", "#ecb83e", 8, "SUPPORTER_PLUS", Set.of(), Source.BUILTIN);
+    public static final Role ADMIN = new Role("ADMIN", "Admin", "#700707", "#ff0000", 9, "MODERATOR", Set.of(), Source.BUILTIN);
+    public static final Role OWNER = new Role("OWNER", "Owner", "#c305ff", "#2bd9fd", 10, "ADMIN", Set.of(), Source.BUILTIN);
 
     public static Builder builder(String name) {
         return new Builder(name);
