@@ -14,10 +14,15 @@ public final class StateSettings {
     public static final double LOCKED_BORDER_SIZE = 20.0D;
 
     /**
-     * Border-Durchmesser im laufenden Server. Wird erst gesetzt, wenn der
-     * Start-Countdown durchgelaufen ist.
+     * Border-Durchmesser im laufenden Server (Overworld und Nether). Wird erst gesetzt,
+     * wenn der Start-Countdown durchgelaufen ist.
      */
     public static final double RUNNING_BORDER_SIZE = 10000.0D;
+
+    /**
+     * Border-Durchmesser im End waehrend des laufenden Servers (100k Bloecke).
+     */
+    public static final double RUNNING_END_BORDER_SIZE = 100000.0D;
 
     private final Component motd;
     private final Component subMotd;
@@ -61,7 +66,7 @@ public final class StateSettings {
             case STARTED -> builder()
                     .join(StateRule.all())
                     .hidePlayers(false)
-                    .border(BorderSettings.of(RUNNING_BORDER_SIZE))
+                    .border(BorderSettings.of(RUNNING_BORDER_SIZE).endSize(RUNNING_END_BORDER_SIZE))
                     .build();
 
             case CLOSED -> builder()

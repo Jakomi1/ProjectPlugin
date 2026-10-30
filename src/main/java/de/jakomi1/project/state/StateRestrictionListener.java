@@ -6,6 +6,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 
 public final class StateRestrictionListener extends EventListener {
 
@@ -13,6 +14,14 @@ public final class StateRestrictionListener extends EventListener {
 
     public StateRestrictionListener(StateManager manager) {
         this.manager = manager;
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        BorderSettings border = manager.settings(manager.currentState()).border();
+        if (border != null) {
+            border.applyToWorld(event.getWorld());
+        }
     }
 
     @EventHandler
