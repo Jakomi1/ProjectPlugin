@@ -128,14 +128,44 @@ public final class Scheduler {
         }
     }
 
-    public void runEntity(Entity entity, Runnable runnable) {
-        if (!enabled() || entity == null || !entity.isValid()) return;
+    public Task runRegionTimer(Location location, Runnable runnable, long delayTicks, long periodTicks) {
+        if (!scheduleable(location)) return Task.noop();
 
-        try {
-            entity.getScheduler().run(plugin, task -> runnable.run(), () -> {
-            });
-        } catch (Throwable ignored) {
+        long delay = safeDelay(delayTicks);
+        long period = safePeriod(periodTicks);
+
+        if (isFolia) {
+            ScheduledTask foliaTask = Bukkit.getRegionScheduler()
+                    .runAtFixedRate(
+                            plugin,
+                            location,
+                            task -> runnable.run(),
+                            delay,
+                            period
+                    );
+
+            return new Task(foliaTask);
+        } else {
+            BukkitTask bukkitTask = Bukkit.getScheduler()
+                    .runTaskTimer(
+                            plugin,
+                            runnable,
+                            delay,
+                            period
+                    );
+
+            return new Task(bukkitTask);
         }
+    }
+
+    public void runEntity(Entity entity, Runnable runnable) {
+        if (!enabled() || entity == null) return;
+
+        entity.getScheduler().run(
+                plugin,
+                task -> runnable.run(),
+                () -> {}
+        );
     }
 
     public void runEntityLater(Entity entity, Runnable runnable, long delayTicks) {

@@ -1,6 +1,7 @@
 package de.jakomi1.project;
 
 import de.jakomi1.database.Database;
+import de.jakomi1.util.MessageUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -15,6 +16,7 @@ public abstract class ProjectPlugin extends JavaPlugin {
     public final void onEnable() {
         this.database = new Database(this);
         this.server = new ProjectServer(this);
+        MessageUtils.init(this);
 
         this.onEnable(this.server);
         server.registerEverything();
@@ -23,13 +25,13 @@ public abstract class ProjectPlugin extends JavaPlugin {
     @Override
     public final void onDisable() {
         if (server != null) {
+            this.onDisable(server);
+        }
+        if (server != null) {
             server.disable();
         }
         if (database != null) {
             database.shutdown();
-        }
-        if (server != null) {
-            this.onDisable(server);
         }
     }
 

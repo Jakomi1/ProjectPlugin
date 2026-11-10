@@ -435,7 +435,7 @@ public final class ComponentUtils {
             defaultColor = NamedTextColor.GRAY;
         }
 
-        return parseMarkupLinesNoAbility(
+        return parseMarkupLinesWithAbility(
                 input,
                 defaultColor,
                 defaultColor
@@ -456,7 +456,7 @@ public final class ComponentUtils {
             color = NamedTextColor.WHITE;
         }
 
-        return parseMarkupLinesNoAbility(
+        return parseMarkupLinesWithAbility(
                 input,
                 NamedTextColor.GRAY,
                 color
@@ -531,6 +531,45 @@ public final class ComponentUtils {
         }
 
         return result;
+    }
+
+    private static List<Component> parseMarkupLinesWithAbility(
+            String input,
+            TextColor defaultTextColor,
+            TextColor colorTagDefault
+    ) {
+        if (input == null) {
+            return List.of(Component.empty());
+        }
+
+        final String token = "<ability>";
+
+        if (!input.contains(token)) {
+            return parseMarkupLinesNoAbility(input, defaultTextColor, colorTagDefault);
+        }
+
+        List<Component> aggregated = new ArrayList<>();
+        String remaining = input;
+
+        while (true) {
+            int idx = remaining.indexOf(token);
+
+            if (idx == -1) {
+                aggregated.addAll(parseMarkupLinesNoAbility(remaining, defaultTextColor, colorTagDefault));
+                break;
+            }
+
+            String before = remaining.substring(0, idx);
+
+            if (!before.isEmpty()) {
+                aggregated.addAll(parseMarkupLinesNoAbility(before, defaultTextColor, colorTagDefault));
+            }
+
+            aggregated.addAll(parseMarkupLinesNoAbility(getSingleAbilityPrefix(), defaultTextColor, colorTagDefault));
+            remaining = remaining.substring(idx + token.length());
+        }
+
+        return aggregated;
     }
 
     private static List<Component> parseMarkupLinesNoAbility(
@@ -1070,5 +1109,25 @@ public final class ComponentUtils {
 
             return value;
         }
+    }
+
+    public static String getSingleAbilityPrefix() {
+        return "<bold>>> Spezielle Fähigkeit <<</bold>";
+    }
+
+    public static String getAbilitiesPrefix() {
+        return "<bold>>> Spezielle Fähigkeiten <<</bold>";
+    }
+
+    public static String getEnchantmentsPrefix() {
+        return "<bold>>> Verzauberungen <<</bold>";
+    }
+
+    public static String getSingleEnchantmentPrefix() {
+        return "<bold>>> Verzauberung <<</bold>";
+    }
+
+    public static String getUpgradePrefix() {
+        return "<bold>>> Verbesserungskosten <<</bold>";
     }
 }

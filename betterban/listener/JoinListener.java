@@ -1,0 +1,44 @@
+package de.jakomi1.betterban.listener;
+
+import de.jakomi1.betterban.util.BanUtils;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+
+import java.util.UUID;
+
+public class JoinListener implements Listener {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onAsyncPreLogin(AsyncPlayerPreLoginEvent event) {
+        String name = event.getName();
+        UUID uuid = event.getUniqueId();
+        String ip = event.getAddress().getHostAddress();
+
+
+        if (!BanUtils.hasJoinedBefore(uuid)) {
+            BanUtils.markJoined(uuid, name);
+        }
+
+        if (BanUtils.isBanned(uuid)) {
+            if (BanUtils.isPermanent(uuid)) {
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
+                        BanUtils.getBanMessage(uuid));
+            } else {
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
+                        BanUtils.getBanMessage(uuid));
+            }
+            return;
+        }
+
+        // Whitelist
+        /*if (!WhitelistCommand.isWhitelisted(name)) {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
+                    chatPrefix.append(Component.text("Lasse dich erst auf unserem Discord whitelisten!\n", NamedTextColor.RED))
+                            .append(Component.text("Link: https://discord.gg/" + discordInviteToken, NamedTextColor.GRAY)));
+            return;
+        }*/
+
+        event.allow();
+    }
+}

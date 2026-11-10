@@ -9,6 +9,7 @@ import de.jakomi1.project.combat.CombatManager;
 import de.jakomi1.project.commandlog.CommandLogManager;
 import de.jakomi1.project.connection.ServerDialogManager;
 import de.jakomi1.project.advancement.AdvancementManager;
+import de.jakomi1.project.betterban.BetterBanManager;
 import de.jakomi1.project.ecsee.EcseeManager;
 import de.jakomi1.project.invsee.InvseeManager;
 import de.jakomi1.project.interact.InteractManager;
@@ -84,6 +85,7 @@ public class ProjectServer {
     private final JoinManager joinManager;
     private final SilentManager silentManager;
     private final InteractManager interactManager;
+    private final BetterBanManager betterBanManager;
 
     private final List<Manager> autoManagers;
 
@@ -136,6 +138,7 @@ public class ProjectServer {
         this.joinManager = new JoinManager(this);
         this.silentManager = new SilentManager(this);
         this.interactManager = new InteractManager(this);
+        this.betterBanManager = new BetterBanManager(this);
 
         this.autoManagers = List.of(
                 dialogManager,
@@ -159,7 +162,8 @@ public class ProjectServer {
                 reportManager,
                 worldCycleManager,
                 joinManager,
-                interactManager
+                interactManager,
+                betterBanManager
         );
     }
 
@@ -217,6 +221,10 @@ public class ProjectServer {
 
     public BiomeManager biomes() {
         return biomeManager;
+    }
+
+    public GlobalSettingsTable globalSettings() {
+        return globalSettings;
     }
 
     public DimensionManager dimensions() {
@@ -293,6 +301,15 @@ public class ProjectServer {
 
     public InteractManager interact() {
         return interactManager;
+    }
+
+    public BetterBanManager betterBan() {
+        return betterBanManager;
+    }
+
+    /** Kurzform fuer {@link #betterBan()}. */
+    public BetterBanManager bans() {
+        return betterBanManager;
     }
 
     public ProjectServer prefix(Component prefix) {
@@ -375,7 +392,9 @@ public class ProjectServer {
                 worldCycleManager,
                 advancementManager,
                 joinManager,
-                silentManager
+                silentManager,
+                interactManager,
+                betterBanManager
         )) {
             if (manager.isEnabled()) {
                 manager.disable();

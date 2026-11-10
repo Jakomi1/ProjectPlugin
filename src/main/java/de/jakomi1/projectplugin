@@ -1,0 +1,14 @@
+package de.jakomi1.projectplugin;
+
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class ProjectPlugin extends JavaPlugin {
+    @Override
+    public void onEnable() {
+        getLogger().info("ProjectPlugin aktiviert");
+    }
+
+    @Override
+    public void onDisable() {
+    }
+}

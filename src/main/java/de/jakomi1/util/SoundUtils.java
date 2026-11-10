@@ -84,4 +84,93 @@ public final class SoundUtils {
     public static int getRandomInt(int bound) {
         return bound <= 0 ? 0 : RANDOM.nextInt(bound);
     }
+
+    public static void playBreakSound(Player player) {
+        playSound(player, Sound.BLOCK_VAULT_BREAK, 1.0f, 1);
+    }
+
+    public static void playCrushSound(Player player) {
+        playSound(player, Sound.UI_STONECUTTER_TAKE_RESULT, 1.0f, 1f);
+    }
+
+    public static void playPlingSound(Player player) {
+        playSound(player, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1f);
+    }
+
+    public static void playPingSound(Player player) {
+        playPingSound(player, 1f);
+    }
+
+    public static void playPingSound(Player player, float pitch) {
+        playSound(player, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, pitch);
+    }
+
+    public static void playMagierSound(Player player) {
+        playSound(player, Sound.ENTITY_ILLUSIONER_AMBIENT, 1.0f, 1f);
+    }
+
+    public static void playSaturationSound(Player player) {
+        playSound(player, Sound.ENTITY_PLAYER_BURP, 1.0f, 1f);
+    }
+
+    public static void playBasicWarpSound(Player player) {
+        playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+    }
+
+    public static void playBasicBundleSound(Player player) {
+        playSound(player, Sound.ITEM_BUNDLE_DROP_CONTENTS, 1.0f, 1.0f);
+    }
+
+    public static void playBasicTPSound(Player player) {
+        playSound(player, Sound.BLOCK_NOTE_BLOCK_FLUTE, 1.0f, 1.0f);
+    }
+
+    public static void playCancelSound(Player player) {
+        playSound(player, Sound.ENTITY_ENDERMAN_HURT, 1.0f, 0.8f);
+    }
+
+    public static void playStrongCancelSound(Player player) {
+        playSound(player, Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO, 2.0f, 0.5f);
+    }
+
+    public static void playDeathSound(Player player) {
+        playSound(player, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.8f);
+    }
+
+    public static void playBoostSound(Player player) {
+        playSound(player, Sound.ENTITY_BREEZE_WIND_BURST, 1.0f, 1f);
+    }
+
+    public static void playOpenSound(Player player) {
+        playSound(player, Sound.BLOCK_ENDER_CHEST_OPEN, 1.0f, 1f);
+    }
+
+    public static void playBurnSoundAmbient(Location location) {
+        playSoundForNearbyPlayers(location, Sound.ENTITY_GENERIC_BURN, 2.0f, 1f);
+    }
+
+    public static void playCloseSound(Player player) {
+        playSound(player, Sound.BLOCK_ENDER_CHEST_CLOSE, 1.0f, 1f);
+    }
+
+    public static void playPlopSound(Player player) {
+        playSound(player, Sound.BLOCK_SNIFFER_EGG_PLOP, 1.0f, (float) getRandomInt(7, 12) / 10);
+    }
+
+    public static int getRandomInt(int start, int end) {
+        return start + RANDOM.nextInt(end - start + 1);
+    }
+
+    public static void playSoundForNearbyPlayers(Location loc, Sound sound, float volume, float pitch, double radius) {
+        if (loc == null || sound == null) return;
+        for (Player player : loc.getWorld().getPlayers()) {
+            if (player.getLocation().distanceSquared(loc) <= radius * radius) {
+                player.playSound(loc, sound, SoundCategory.MASTER, volume, pitch);
+            }
+        }
+    }
+
+    public static void playSoundForNearbyPlayers(Location loc, Sound sound, float volume, float pitch) {
+        playSoundForNearbyPlayers(loc, sound, volume, pitch, 12.0);
+    }
 }

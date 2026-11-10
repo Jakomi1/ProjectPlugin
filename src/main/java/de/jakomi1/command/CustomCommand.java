@@ -18,8 +18,19 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public interface CustomCommand extends CommandExecutor, TabCompleter, Registerable {
+
+    /**
+     * Merkt sich die tatsaechlich erzeugte Bukkit-{@link Command}-Instanz, damit
+     * ein erneutes Registrieren (etwa nach einem Reload) den alten Befehl
+     * zuverlaessig ersetzen kann. Bukkit ueberschreibt einen bereits
+     * registrierten Befehl nicht automatisch.
+     */
+    Map<CustomCommand, Command> REGISTERED_COMMANDS =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     String name();
 
@@ -98,6 +109,10 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
 
     @Override
     default void register(ProjectPlugin plugin) {
+        // Ein Reload registriert denselben Befehl erneut. Ohne vorheriges
+        // Entfernen bleibt in der CommandMap der alte Befehl stehen.
+        unregister(plugin);
+
         CommandMap commandMap = getCommandMap(plugin);
 
         if (commandMap == null) {
@@ -129,6 +144,41 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
                 plugin.getName(),
                 dynamicCommand
         );
+
+        REGISTERED_COMMANDS.put(this, dynamicCommand);
+    }
+
+    /**
+     * Entfernt den zuletzt von {@link #register(ProjectPlugin)} angelegten
+     * Befehl wieder aus der CommandMap. Das ist wichtig, damit ein erneutes
+     * Aktivieren keine veraltete Instanz stehen laesst.
+     */
+    default void unregister(ProjectPlugin plugin) {
+        Command registered = REGISTERED_COMMANDS.remove(this);
+
+        if (registered == null) {
+            return;
+        }
+
+        CommandMap commandMap = getCommandMap(plugin);
+
+        if (commandMap == null) {
+            return;
+        }
+
+        registered.unregister(commandMap);
+
+        Map<String, Command> knownCommands = commandMap.getKnownCommands();
+
+        if (knownCommands != null) {
+            // Bukkit legt zusaetzlich den Schluessel "pluginname:befehl" an.
+            // Command#unregister entfernt nur Label und Aliase.
+            try {
+                knownCommands.values().removeIf(command -> command == registered);
+            } catch (RuntimeException ignored) {
+                // Die CommandMap darf beim Herunterfahren nicht scheitern.
+            }
+        }
     }
 
     private @NotNull Command getCommand(String permission) {
