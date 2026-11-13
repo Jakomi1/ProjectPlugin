@@ -18,7 +18,7 @@ public final class ChatListener extends EventListener {
         this.manager = manager;
     }
 
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
         if (!manager.isEnabled()) return;
 
@@ -31,6 +31,10 @@ public final class ChatListener extends EventListener {
             }
 
             manager.server().scheduler().runEntity(target, () -> target.sendMessage(result));
+        }
+
+        if (manager.logsToConsole()) {
+            manager.server().console().sendMessage(result);
         }
 
         event.setCancelled(true);

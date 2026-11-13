@@ -156,7 +156,7 @@ public final class TermsManager implements Manager {
         }
     }
 
-    private TermsTable termsTable() {
+    private synchronized TermsTable termsTable() {
         if (!tableRegistered) {
             table.register(server.plugin());
             tableRegistered = true;

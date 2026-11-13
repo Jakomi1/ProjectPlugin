@@ -2,10 +2,17 @@ package de.jakomi1.util;
 
 import de.jakomi1.project.ProjectPlugin;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Allgemeine Nachrichten-Hilfsklasse fuer alle ProjectPlugin-basierten Plugins.
@@ -18,6 +25,8 @@ import java.util.List;
 public final class MessageUtils {
 
     public static String playerSymbol = "\uD83D\uDC64";
+
+    private static final Pattern URL_PATTERN = Pattern.compile("(https?://\\S+)", Pattern.CASE_INSENSITIVE);
 
     private static ProjectPlugin plugin;
 
@@ -86,6 +95,56 @@ public final class MessageUtils {
     public static void sendUnstyledMessage(Player player, Component message) {
         if (player == null || message == null) return;
         player.sendMessage(message);
+    }
+
+    /**
+     * Baut eine Nachricht mit klickbaren http(s)-Links. Der Text selbst wird
+     * als Klartext uebernommen und in Weiss gesetzt; Links erscheinen blau,
+     * unterstrichen und lassen sich direkt im Browser oeffnen.
+     */
+    public static Component linkify(Component message) {
+        return linkify(message == null
+                ? ""
+                : PlainTextComponentSerializer.plainText().serialize(message));
+    }
+
+    public static Component linkify(String plain) {
+        if (plain == null || plain.isEmpty()) {
+            return Component.empty();
+        }
+
+        Matcher matcher = URL_PATTERN.matcher(plain);
+        Component result = Component.empty();
+        int lastEnd = 0;
+
+        while (matcher.find()) {
+            if (matcher.start() > lastEnd) {
+                String before = plain.substring(lastEnd, matcher.start());
+                if (!before.isEmpty()) {
+                    result = result.append(Component.text(before).color(NamedTextColor.WHITE));
+                }
+            }
+
+            String url = matcher.group(1);
+            result = result.append(Component.text(url)
+                    .color(NamedTextColor.BLUE)
+                    .decorate(TextDecoration.UNDERLINED)
+                    .clickEvent(ClickEvent.openUrl(url))
+                    .hoverEvent(HoverEvent.showText(
+                            Component.text("Klicke zum \u00D6ffnen").color(NamedTextColor.GRAY)
+                    )));
+
+            lastEnd = matcher.end();
+        }
+
+        if (lastEnd < plain.length()) {
+            String after = plain.substring(lastEnd);
+            if (!after.isEmpty()) {
+                result = result.append(Component.text(after).color(NamedTextColor.WHITE));
+            }
+        }
+
+        return result;
     }
 
     public static boolean isAdmin(Player player) {

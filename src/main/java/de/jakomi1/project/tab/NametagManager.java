@@ -36,6 +36,8 @@ public final class NametagManager implements Manager {
     private Function<Player, String> colorResolver = player -> null;
     private Function<Player, Component> customNameResolver = player -> null;
 
+    private boolean teamsEnabled;
+
     private final Map<UUID, Map<String, KnownTeam>> known = new ConcurrentHashMap<>();
     private final Map<UUID, Role> roleCache = new HashMap<>();
     private Scheduler.Task timer;
@@ -47,6 +49,7 @@ public final class NametagManager implements Manager {
 
     public NametagManager team(Function<Player, String> resolver) {
         this.teamResolver = resolver == null ? player -> null : resolver;
+        this.teamsEnabled = resolver != null;
         return this;
     }
 
@@ -87,6 +90,7 @@ public final class NametagManager implements Manager {
     }
 
     public NametagManager roles(RoleManager roles) {
+        this.teamsEnabled = roles != null;
         this.teamResolver = player -> {
             Role role = cachedRole(roles, player);
             return role.isMember() ? null : role.name();
@@ -108,7 +112,9 @@ public final class NametagManager implements Manager {
         if (enabled) return this;
         enabled = true;
 
-        bridge.init();
+        if (teamsEnabled) {
+            bridge.init();
+        }
         timer = server.scheduler().runTimer(this::syncAll, 20L, syncPeriod);
         requestSync();
         return this;
@@ -135,14 +141,30 @@ public final class NametagManager implements Manager {
         server.scheduler().runGlobal(this::syncAll);
     }
 
+    /**
+     * Aktualisiert den Nametag eines einzelnen Spielers (z. B. nach einem
+     * Dimensionswechsel), ohne die Teams aller Spieler neu zu synchronisieren.
+     */
+    public void refresh(Player player) {
+        if (player == null || !enabled) return;
+        syncCustomNames(List.of(player));
+    }
+
     private void syncAll() {
-        if (!bridge.isReady()) return;
         if (server.plugin() == null || !server.plugin().isEnabled()) return;
 
         roleCache.clear();
 
         List<Player> players = List.copyOf(Bukkit.getOnlinePlayers());
 
+        if (teamsEnabled && bridge.isReady()) {
+            syncTeams(players);
+        }
+
+        syncCustomNames(players);
+    }
+
+    private void syncTeams(List<Player> players) {
         Map<String, DesiredTeam> desired = new LinkedHashMap<>();
 
         for (Player player : players) {
@@ -175,8 +197,6 @@ public final class NametagManager implements Manager {
         for (Player viewer : players) {
             server.scheduler().runEntity(viewer, () -> reconcileViewer(viewer, desired, online));
         }
-
-        syncCustomNames(players);
     }
 
     private void reconcileViewer(Player viewer, Map<String, DesiredTeam> desired, Set<UUID> online) {
@@ -276,11 +296,11 @@ public final class NametagManager implements Manager {
         for (Player player : players) {
             if (player == null || !player.isOnline()) continue;
 
-            Component desired = customNameResolver.apply(player);
-            boolean visible = desired != null;
-
             server.scheduler().runEntity(player, () -> {
                 if (!player.isOnline()) return;
+
+                Component desired = customNameResolver.apply(player);
+                boolean visible = desired != null;
 
                 Component current = player.customName();
                 if (current == null ? desired != null : !current.equals(desired)) {

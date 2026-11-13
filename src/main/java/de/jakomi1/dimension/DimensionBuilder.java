@@ -77,6 +77,15 @@ public final class DimensionBuilder {
         this.path = path;
     }
 
+    /**
+     * Erzeugt einen Builder ohne {@link DimensionManager}. Die Definition kann
+     * anschliessend ueber {@link #build()} in einem eigenen Datapack
+     * (z. B. {@code DatapackBundle}) verwendet werden.
+     */
+    public static DimensionBuilder standalone(String namespace, String path) {
+        return new DimensionBuilder(null, namespace, path);
+    }
+
     public DimensionBuilder overworld() {
         ultrawarm(false);
         natural(true);
@@ -437,6 +446,10 @@ public final class DimensionBuilder {
     }
 
     public DimensionManager register() {
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Standalone-Builder koennen nicht registriert werden; nutze build().");
+        }
         manager.register(new DimensionDefinition(this));
         return manager;
     }

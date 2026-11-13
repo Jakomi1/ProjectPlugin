@@ -55,6 +55,15 @@ public final class BiomeBuilder {
         this.path = path;
     }
 
+    /**
+     * Erzeugt einen Builder ohne {@link BiomeManager}. Die Definition kann
+     * anschliessend ueber {@link #build()} in einem eigenen Datapack
+     * (z. B. {@code DatapackBundle}) verwendet werden.
+     */
+    public static BiomeBuilder standalone(String namespace, String path) {
+        return new BiomeBuilder(null, namespace, path);
+    }
+
     public BiomeBuilder temperature(float temperature) {
         this.temperature = temperature;
         return this;
@@ -245,6 +254,10 @@ public final class BiomeBuilder {
     }
 
     public BiomeManager register() {
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Standalone-Builder koennen nicht registriert werden; nutze build().");
+        }
         manager.register(new BiomeDefinition(this));
         return manager;
     }

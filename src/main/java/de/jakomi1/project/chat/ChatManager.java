@@ -30,6 +30,7 @@ public final class ChatManager implements Manager {
     private Function<Player, Component> joinResolver;
     private Function<Player, Component> quitResolver;
     private String silentTag;
+    private boolean logToConsole;
 
     public ChatManager(ProjectServer server) {
         this.server = server;
@@ -102,6 +103,19 @@ public final class ChatManager implements Manager {
     public ChatManager quit(Function<Player, Component> resolver) {
         this.quitResolver = resolver;
         return this;
+    }
+
+    /**
+     * Schreibt jede formatierte Chat-Zeile zusaetzlich in die Konsole. Ohne
+     * diese Option landet der Chat nur bei den Online-Spielern.
+     */
+    public ChatManager logToConsole(boolean logToConsole) {
+        this.logToConsole = logToConsole;
+        return this;
+    }
+
+    public boolean logsToConsole() {
+        return logToConsole;
     }
 
     public Component format(Player player, Component message) {

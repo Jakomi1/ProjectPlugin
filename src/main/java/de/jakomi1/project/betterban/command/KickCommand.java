@@ -56,7 +56,10 @@ public final class KickCommand extends BetterBanCommand {
         manager.sendKickWebhook(target.getName(), executor, reason);
 
         sender.sendMessage(msg().success(target.getName() + " wurde von " + executor + " gekickt."));
-        target.kick(manager.messages().kickMessage(reason));
+        // Kicks laufen ueber den Entity-Scheduler, damit sie auch unter Folia
+        // in der richtigen Region ausgefuehrt werden.
+        manager.server().scheduler().runEntity(target,
+                () -> target.kick(manager.messages().kickMessage(reason)));
 
         return true;
     }

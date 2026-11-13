@@ -25,7 +25,14 @@ public final class PackFormat {
             return fromApi;
         }
 
-        Integer fromVersion = fromVersionString(Bukkit.getBukkitVersion());
+        String bukkitVersion = null;
+        try {
+            bukkitVersion = Bukkit.getBukkitVersion();
+        } catch (Throwable ignored) {
+            // In der Paper-Bootstrap-Phase ist der Server noch nicht gesetzt.
+        }
+
+        Integer fromVersion = fromVersionString(bukkitVersion);
         return fromVersion != null ? fromVersion : FALLBACK;
     }
 

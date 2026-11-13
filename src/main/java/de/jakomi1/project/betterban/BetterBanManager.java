@@ -53,6 +53,7 @@ public final class BetterBanManager implements Manager {
     private final VoiceBanTable voiceBanTable = new VoiceBanTable();
     private final HasJoinedTable hasJoinedTable = new HasJoinedTable();
     private final List<CustomCommand> commands = new ArrayList<>();
+    private final List<CustomCommand> voiceCommands = new ArrayList<>();
     private final Set<UUID> voiceDisabled = ConcurrentHashMap.newKeySet();
 
     private boolean enabled;
@@ -95,6 +96,10 @@ public final class BetterBanManager implements Manager {
 
         tryInstallVoiceChat();
 
+        server.plugin().getLogger().info(
+                "BetterBan aktiviert (Mindestrolle: " + minimumRole.name() + ")."
+        );
+
         return this;
     }
 
@@ -121,6 +126,15 @@ public final class BetterBanManager implements Manager {
     public void onVoiceChatUnavailable() {
         voiceChatHook = null;
         voiceDisabled.clear();
+
+        // Die Voice-Befehle gehoeren zur Voicechat-Integration. Ohne diesen
+        // Schritt wuerden sie beim naechsten Aktivieren doppelt registriert.
+        for (CustomCommand command : voiceCommands) {
+            command.unregister(server.plugin());
+            commands.remove(command);
+        }
+
+        voiceCommands.clear();
         voiceCommandsRegistered = false;
     }
 
@@ -144,6 +158,7 @@ public final class BetterBanManager implements Manager {
         voiceChatHook = null;
         voiceCommandsRegistered = false;
         voiceDisabled.clear();
+        voiceCommands.clear();
         commands.clear();
 
         flushAll();
@@ -191,9 +206,19 @@ public final class BetterBanManager implements Manager {
 
         voiceCommandsRegistered = true;
 
-        registerCommand(new VoiceBanCommand(this));
-        registerCommand(new VoiceBanListCommand(this));
-        registerCommand(new VoiceUnbanCommand(this));
+        VoiceBanCommand voiceBan = new VoiceBanCommand(this);
+        VoiceBanListCommand voiceBanList = new VoiceBanListCommand(this);
+        VoiceUnbanCommand voiceUnban = new VoiceUnbanCommand(this);
+
+        registerCommand(voiceBan);
+        registerCommand(voiceBanList);
+        registerCommand(voiceUnban);
+
+        voiceCommands.add(voiceBan);
+        voiceCommands.add(voiceBanList);
+        voiceCommands.add(voiceUnban);
+
+        server.plugin().getLogger().info("BetterBan: Voicechat-Befehle registriert.");
     }
 
     private void registerCommand(CustomCommand command) {
@@ -431,12 +456,25 @@ public final class BetterBanManager implements Manager {
         Player online = Bukkit.getPlayerExact(trimmed);
 
         if (online != null) {
+            // Nach einem Reload koennen Spieler online sein, ohne dass sie in
+            // dieser Server-Session bereits erfasst wurden.
+            if (!hasJoinedTable.containsKey(online.getUniqueId())) {
+                markJoined(online.getUniqueId(), online.getName());
+            }
+
             return online.getUniqueId();
         }
 
         OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(trimmed);
 
         if (cached != null) {
+            // Der lokale Mojang-Cache enthaelt nur Spieler, die den Server
+            // bereits betreten haben. Damit ist ein Ban auch direkt nach der
+            // Integration moeglich, ohne dass der Spieler erneut joinen muss.
+            if (!hasJoinedTable.containsKey(cached.getUniqueId())) {
+                markJoined(cached.getUniqueId(), trimmed);
+            }
+
             return cached.getUniqueId();
         }
 

@@ -9,7 +9,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-final class BiomeDatapack {
+/**
+ * Schreibt Biomes (und optional eine passende Dimension) in ein Datapack.
+ *
+ * <p>{@link #write(Path)} erzeugt zusaetzlich die {@code pack.mcmeta} fuer
+ * ein eigenstaendiges Pack. Fuer ein gemeinsames Pack ueber
+ * {@code de.jakomi1.datapack.DatapackBundle} wird stattdessen
+ * {@link #writeContent(Path)} verwendet.</p>
+ */
+public final class BiomeDatapack {
 
     private final String namespace;
     private final String description;
@@ -17,8 +25,8 @@ final class BiomeDatapack {
     private final String dimensionName;
     private final String dimensionType;
 
-    BiomeDatapack(String namespace, String packName, String description,
-                  List<BiomeDefinition> biomes, String dimensionName, String dimensionType) {
+    public BiomeDatapack(String namespace, String packName, String description,
+                         List<BiomeDefinition> biomes, String dimensionName, String dimensionType) {
         this.namespace = namespace;
         this.description = description;
         this.biomes = biomes;
@@ -26,10 +34,23 @@ final class BiomeDatapack {
         this.dimensionType = dimensionType;
     }
 
+    public BiomeDatapack(String namespace, String description, List<BiomeDefinition> biomes) {
+        this(namespace, null, description, biomes, null, null);
+    }
+
     public void write(Path packRootPath) throws IOException {
         File packRoot = packRootPath.toFile();
-
         BiomeDatapackWriter.writeFile(packRoot, "pack.mcmeta", DatapackMcmeta.create(description));
+        writeContent(packRootPath);
+    }
+
+    /**
+     * Schreibt nur den Inhalt des Packs (Biomes und optionale Dimension),
+     * ohne {@code pack.mcmeta}.
+     */
+    public void writeContent(Path packRootPath) throws IOException {
+        File packRoot = packRootPath.toFile();
+
         BiomeDatapackWriter.writeBiomes(packRoot, namespace, biomes);
 
         if (dimensionName != null && !biomes.isEmpty()) {

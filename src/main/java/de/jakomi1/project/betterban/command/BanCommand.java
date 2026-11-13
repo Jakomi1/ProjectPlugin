@@ -73,7 +73,10 @@ public final class BanCommand extends BetterBanCommand {
         Player online = Bukkit.getPlayer(uuid);
 
         if (online != null && online.isOnline()) {
-            online.kick(manager.messages().banMessage(manager.banEntry(uuid)));
+            // Kicks laufen ueber den Entity-Scheduler, damit sie auch unter
+            // Folia in der richtigen Region ausgefuehrt werden.
+            manager.server().scheduler().runEntity(online,
+                    () -> online.kick(manager.messages().banMessage(manager.banEntry(uuid))));
         }
 
         return true;

@@ -1130,4 +1130,12 @@ public final class ComponentUtils {
     public static String getUpgradePrefix() {
         return "<bold>>> Verbesserungskosten <<</bold>";
     }
+
+    public static String getModificationsPrefix() {
+        return "<bold>>> Modifikationen <<</bold>";
+    }
+
+    public static String getManualEnchantmentsPrefix() {
+        return "<bold>>> Zusätzliche Verzauberungen <<</bold>";
+    }
 }

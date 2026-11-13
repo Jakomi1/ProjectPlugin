@@ -138,6 +138,11 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
             }
         }
 
+        // Bei einem Reload werden neue Command-Instanzen erzeugt. Die alte
+        // Registrierung ist ueber diese Instanz nicht mehr erreichbar, daher
+        // muss der Eintrag anhand des Plugin-Namespace entfernt werden.
+        removeStaleRegistration(commandMap, plugin);
+
         Command dynamicCommand = getCommand(permission);
 
         commandMap.register(
@@ -146,6 +151,34 @@ public interface CustomCommand extends CommandExecutor, TabCompleter, Registerab
         );
 
         REGISTERED_COMMANDS.put(this, dynamicCommand);
+    }
+
+    /**
+     * Entfernt eine noch in der CommandMap vorhandene Registrierung dieses
+     * Befehls, die von einer frueheren Plugin-Instanz (z.B. vor einem Reload)
+     * stammt. Bukkit ueberschreibt bereits registrierte Labels nicht.
+     */
+    private void removeStaleRegistration(CommandMap commandMap, ProjectPlugin plugin) {
+        Map<String, Command> knownCommands = commandMap.getKnownCommands();
+
+        if (knownCommands == null) {
+            return;
+        }
+
+        String namespaced = (plugin.getName() + ":" + name()).toLowerCase();
+        Command previous = knownCommands.get(namespaced);
+
+        if (previous == null) {
+            return;
+        }
+
+        previous.unregister(commandMap);
+
+        try {
+            knownCommands.values().removeIf(command -> command == previous);
+        } catch (RuntimeException ignored) {
+            // Die CommandMap darf beim Herunterfahren nicht scheitern.
+        }
     }
 
     /**

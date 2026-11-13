@@ -30,6 +30,7 @@ public final class TabManager implements Manager {
     private Function<Player, Component> footerProvider = player -> defaultFooter();
     private Function<Player, Component> listNameProvider = player ->
             Component.text(player.getName(), NamedTextColor.WHITE);
+    private Function<Player, Integer> listOrderProvider = player -> 0;
 
     private boolean customHeader;
     private boolean customFooter;
@@ -58,6 +59,16 @@ public final class TabManager implements Manager {
         this.listNameProvider = provider == null
                 ? player -> Component.text(player.getName(), NamedTextColor.WHITE)
                 : provider;
+        return this;
+    }
+
+    /**
+     * Relative Sortierung innerhalb der Tab-Liste. Hoehere Werte stehen weiter
+     * oben. Der Wert muss positiv sein; kleinere Werte werden auf {@code 1}
+     * angehoben.
+     */
+    public TabManager listOrder(Function<Player, Integer> provider) {
+        this.listOrderProvider = provider == null ? player -> 0 : provider;
         return this;
     }
 
@@ -147,11 +158,7 @@ public final class TabManager implements Manager {
     public void update(Player player) {
         if (player == null || !player.isOnline()) return;
 
-        player.sendPlayerListHeaderAndFooter(
-                headerProvider.apply(player),
-                footerProvider.apply(player)
-        );
-        player.playerListName(listNameProvider.apply(player));
+        server.scheduler().runEntity(player, () -> sendUpdate(player, null, null));
     }
 
     private void sendUpdate(Player player, Component sharedHeader, Component sharedFooter) {
@@ -161,6 +168,7 @@ public final class TabManager implements Manager {
         Component footer = sharedFooter != null ? sharedFooter : footerProvider.apply(player);
         player.sendPlayerListHeaderAndFooter(header, footer);
         player.playerListName(listNameProvider.apply(player));
+        player.setPlayerListOrder(Math.max(1, listOrderProvider.apply(player)));
     }
 
     /**

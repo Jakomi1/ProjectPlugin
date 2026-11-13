@@ -19,34 +19,61 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-final class DimensionDatapack {
+/**
+ * Schreibt Dimensionen, ihre Dimension-Types, eingebettete Biomes und
+ * Dimensions-Tags in ein Datapack.
+ *
+ * <p>{@link #write(Path)} erzeugt zusaetzlich die {@code pack.mcmeta} fuer
+ * ein eigenstaendiges Pack. Fuer ein gemeinsames Pack ueber
+ * {@code de.jakomi1.datapack.DatapackBundle} wird stattdessen
+ * {@link #writeContent(Path)} verwendet.</p>
+ */
+public final class DimensionDatapack {
 
     private final String namespace;
     private final String description;
     private final List<DimensionDefinition> dimensions;
 
-    DimensionDatapack(String namespace, String packName, String description,
-                      List<DimensionDefinition> dimensions) {
+    public DimensionDatapack(String namespace, String packName, String description,
+                             List<DimensionDefinition> dimensions) {
         this.namespace = namespace;
         this.description = description;
         this.dimensions = dimensions;
     }
 
+    public DimensionDatapack(String namespace, String description, List<DimensionDefinition> dimensions) {
+        this(namespace, null, description, dimensions);
+    }
+
     public void write(Path packRootPath) throws IOException {
         File packRoot = packRootPath.toFile();
-
         BiomeDatapackWriter.writeFile(packRoot, "pack.mcmeta", DatapackMcmeta.create(description));
+        writeContent(packRootPath);
+    }
+
+    /**
+     * Schreibt nur den Inhalt des Packs, ohne {@code pack.mcmeta}.
+     */
+    public void writeContent(Path packRootPath) throws IOException {
+        File packRoot = packRootPath.toFile();
+
         BiomeDatapackWriter.writeBiomes(packRoot, namespace, embeddedBiomes());
 
         for (DimensionDefinition dimension : dimensions) {
+            String dimensionNamespace = dimension.namespace() != null
+                    ? dimension.namespace()
+                    : namespace;
+
             if (dimension.dimensionType() == null) {
                 File typeFile = new File(packRoot,
-                        "data/" + namespace + "/dimension_type/" + dimension.path().replace('.', '/') + ".json");
+                        "data/" + dimensionNamespace + "/dimension_type/"
+                                + dimension.path().replace('.', '/') + ".json");
                 BiomeDatapackWriter.writeFile(typeFile.getParentFile(), typeFile.getName(), dimensionTypeJson(dimension));
             }
 
             File dimensionFile = new File(packRoot,
-                    "data/" + namespace + "/dimension/" + dimension.path().replace('.', '/') + ".json");
+                    "data/" + dimensionNamespace + "/dimension/"
+                            + dimension.path().replace('.', '/') + ".json");
             BiomeDatapackWriter.writeFile(dimensionFile.getParentFile(), dimensionFile.getName(), dimensionJson(dimension));
         }
 

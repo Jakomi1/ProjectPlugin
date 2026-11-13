@@ -14,6 +14,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
+import java.util.function.IntSupplier;
 
 public class PingListener extends EventListener {
 
@@ -28,6 +31,10 @@ public class PingListener extends EventListener {
     private boolean hidePlayers = false;
     private boolean centerMotd = true;
     private String iconPath = "assets/icon.png";
+
+    private Function<ServerListPingEvent, Component> motdProvider;
+    private IntSupplier maxPlayersProvider;
+    private BooleanSupplier hidePlayersProvider;
 
     public PingListener() {
         ensureIconLoaded();
@@ -60,6 +67,35 @@ public class PingListener extends EventListener {
 
     public PingListener setCenterMotd(boolean centerMotd) {
         this.centerMotd = centerMotd;
+        return this;
+    }
+
+    /**
+     * Liefert die MOTD dynamisch pro Ping. Der Rueckgabewert hat Vorrang vor
+     * {@link #setMainMotd(Component)} und {@link #setSubMotd(Component)}, damit
+     * ein Projekt z. B. den Serverzustand oder die Uhrzeit beruecksichtigen
+     * kann.
+     */
+    public PingListener setMotdProvider(Function<ServerListPingEvent, Component> motdProvider) {
+        this.motdProvider = motdProvider;
+        return this;
+    }
+
+    /**
+     * Liefert die maximale Spieleranzahl dynamisch pro Ping. Der Wert hat
+     * Vorrang vor {@link #setMaxPlayers(int)}.
+     */
+    public PingListener setMaxPlayersProvider(IntSupplier maxPlayersProvider) {
+        this.maxPlayersProvider = maxPlayersProvider;
+        return this;
+    }
+
+    /**
+     * Entscheidet dynamisch pro Ping, ob die Online-Spieler versteckt werden.
+     * Der Wert hat Vorrang vor {@link #setHidePlayers(boolean)}.
+     */
+    public PingListener setHidePlayersProvider(BooleanSupplier hidePlayersProvider) {
+        this.hidePlayersProvider = hidePlayersProvider;
         return this;
     }
 
@@ -127,14 +163,26 @@ public class PingListener extends EventListener {
         if (numPlayers >= 0) {
             event.setNumPlayers(numPlayers);
         }
-        if (maxPlayers >= 0) {
-            event.setMaxPlayers(maxPlayers);
-        }
-        if (hidePlayers) {
-            event.setHidePlayers(true);
+
+        int effectiveMaxPlayers = maxPlayersProvider != null
+                ? maxPlayersProvider.getAsInt()
+                : maxPlayers;
+        if (effectiveMaxPlayers >= 0) {
+            event.setMaxPlayers(effectiveMaxPlayers);
         }
 
-        event.motd(mainMotd.append(subMotd));
+        boolean effectiveHidePlayers = hidePlayersProvider != null
+                ? hidePlayersProvider.getAsBoolean()
+                : hidePlayers;
+        // Bewusst immer setzen: Ein frueherer Zustand (z. B. versteckte
+        // Spielerliste waehrend des Countdowns) muss nach dem Start wieder
+        // zurueckgesetzt werden.
+        event.setHidePlayers(effectiveHidePlayers);
+
+        Component motd = motdProvider != null
+                ? motdProvider.apply(event)
+                : mainMotd.append(subMotd);
+        event.motd(motd == null ? Component.empty() : motd);
 
         if (centerMotd) {
             centerMotd(event);

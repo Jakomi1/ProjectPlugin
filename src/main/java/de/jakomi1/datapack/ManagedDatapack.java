@@ -18,14 +18,29 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public final class ManagedDatapack {
 
-    private final Plugin plugin;
+    private final Consumer<String> info;
+    private final Consumer<String> warning;
     private final String packName;
 
     public ManagedDatapack(Plugin plugin, String packName) {
-        this.plugin = plugin;
+        this(plugin.getLogger()::info, plugin.getLogger()::warning, packName);
+    }
+
+    /**
+     * Erlaubt das Schreiben eines Datapacks auch aus der Paper-Bootstrap-Phase,
+     * in der noch kein {@link Plugin}-Objekt existiert. Dort kann zum Beispiel
+     * der {@code ComponentLogger} des {@code BootstrapContext} verwendet werden.
+     */
+    public ManagedDatapack(Consumer<String> info, Consumer<String> warning, String packName) {
+        if (info == null || warning == null) {
+            throw new IllegalArgumentException("Logger dürfen nicht null sein.");
+        }
+        this.info = info;
+        this.warning = warning;
         this.packName = packName;
     }
 
@@ -49,6 +64,29 @@ public final class ManagedDatapack {
         return target;
     }
 
+    /**
+     * Entfernt das Pack aus dem {@code datapacks}-Ordner der Welt.
+     *
+     * <p>Wird benoetigt, wenn ein Pack in ein anderes uebergegangen ist und
+     * die alte Kopie sonst doppelte Registry-Eintraege erzeugen wuerde.</p>
+     *
+     * @return {@code true}, wenn ein Ordner entfernt wurde
+     */
+    public boolean remove(Path worldFolder) throws IOException {
+        if (worldFolder == null) {
+            throw new IllegalArgumentException("worldFolder darf nicht null sein.");
+        }
+
+        Path target = worldRoot(worldFolder).resolve("datapacks").resolve(packName);
+        if (!Files.exists(target)) {
+            return false;
+        }
+
+        deleteRecursively(target);
+        info.accept("Datapack '" + packName + "' entfernt.");
+        return true;
+    }
+
     public void load() {
         try {
             DatapackManager manager = Bukkit.getServer().getDatapackManager();
@@ -65,16 +103,16 @@ public final class ManagedDatapack {
             }
 
             if (pack == null) {
-                plugin.getLogger().warning("Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
+                warning.accept("Datapack '" + packName + "' wurde nach refreshPacks() nicht gefunden.");
                 return;
             }
 
             if (!pack.isEnabled()) {
                 pack.setEnabled(true);
-                plugin.getLogger().info("Datapack '" + packName + "' wurde geladen.");
+                info.accept("Datapack '" + packName + "' wurde geladen.");
             }
         } catch (Throwable t) {
-            plugin.getLogger().warning("Datapack '" + packName + "' konnte nicht geladen werden: " + t.getMessage());
+            warning.accept("Datapack '" + packName + "' konnte nicht geladen werden: " + t.getMessage());
         }
     }
 
@@ -98,9 +136,9 @@ public final class ManagedDatapack {
                 Files.createDirectories(destination.getParent());
                 try {
                     Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
-                    plugin.getLogger().info("Datapack '" + packName + "': " + pathName(relative) + " aktualisiert.");
+                    info.accept("Datapack '" + packName + "': " + pathName(relative) + " aktualisiert.");
                 } catch (IOException e) {
-                    plugin.getLogger().warning("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht aktualisiert werden: " + e.getMessage());
+                    warning.accept("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht aktualisiert werden: " + e.getMessage());
                 }
             }
         }
@@ -114,9 +152,9 @@ public final class ManagedDatapack {
 
                 try {
                     Files.deleteIfExists(path);
-                    plugin.getLogger().info("Datapack '" + packName + "': " + pathName(relative) + " entfernt.");
+                    info.accept("Datapack '" + packName + "': " + pathName(relative) + " entfernt.");
                 } catch (IOException e) {
-                    plugin.getLogger().warning("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht entfernt werden: " + e.getMessage());
+                    warning.accept("Datapack '" + packName + "': " + pathName(relative) + " konnte nicht entfernt werden: " + e.getMessage());
                 }
             }
         }

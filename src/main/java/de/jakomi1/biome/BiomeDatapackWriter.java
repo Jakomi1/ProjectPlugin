@@ -33,8 +33,9 @@ public final class BiomeDatapackWriter {
         }
 
         for (BiomeDefinition biome : biomes) {
+            String biomeNamespace = biome.namespace() != null ? biome.namespace() : namespace;
             File biomeFile = new File(packRoot,
-                    "data/" + namespace + "/worldgen/biome/" + biome.path().replace('.', '/') + ".json");
+                    "data/" + biomeNamespace + "/worldgen/biome/" + biome.path().replace('.', '/') + ".json");
             writeFile(biomeFile.getParentFile(), biomeFile.getName(), biomeJson(biome));
         }
 
